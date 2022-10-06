@@ -1,4 +1,5 @@
 import random
+import time
 from util import get_output_folder
 
 SEED = -1
