@@ -1,5 +1,5 @@
-torch==1.12.1+cu113
-torchvision==0.13.1+cu113
+torch==1.12.1
+torchvision==0.13.1
 omegaconf==2.2.3
 einops==0.4.1
 pytorch-lightning==1.7.4
@@ -13,6 +13,5 @@ ftfy
 matplotlib
 resize-right
 torchdiffeq
-https://download.pytorch.org/whl/cu113
 git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
 git+https://github.com/openai/CLIP.git@main#egg=clip
