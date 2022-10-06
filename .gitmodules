@@ -4,3 +4,6 @@
 [submodule "AdaBins"]
 	path = AdaBins
 	url = https://github.com/shariqfarooq123/AdaBins.git
+[submodule "MiDaS"]
+	path = MiDaS
+	url = https://github.com/isl-org/MiDaS.git
