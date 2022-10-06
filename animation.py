@@ -13,10 +13,27 @@ sys.path.extend([
 import os
 import subprocess
 import numpy as np
+import pandas as pd
+import json
+import util
+import torch
+import cv2
+
+from PIL import Image
+from torch import autocast
+from pytorch_lightning import seed_everything
+from base64 import b64encode
+
+from ldm.models.diffusion.ddim import DDIMSampler
+from ldm.models.diffusion.plms import PLMSSampler
+from k_diffusion.external import CompVisDenoiser
+from einops import repeat, rearrange
+from contextlib import nullcontext
+
 from animation_params import AnimationParams
 from run_params import RunParams
+from model_loader import ModelLoader
 from helpers import DepthModel, sampler_fn
-from base64 import b64encode
 
 # TODO: move config to a separate file or argparse
 models_path = "/content/drive/MyDrive/AI/Stable_Diffusion/"
@@ -28,9 +45,12 @@ class Animation():
     self.animation_params = AnimationParams(motion_type, **kwargs)
     self.run_params = RunParams(out_path, batch_name, init_image, prompts)
     self.song = song
+    self.prompts = prompts
     self.fps = kwargs.get('fps', FPS) # TODO: move in run_params
     self.device = "cuda"
-    self.depth_model = self._load_depth_model()
+    self.depth_model = self._load_depth_model() # TODO: move and unificate in model_loader.py
+    self.model_loader = ModelLoader(models_path)
+    self.model = self.model_loader.load_model_from_config()
 
   def run(self):
     self._generate_frames()
@@ -66,7 +86,7 @@ class Animation():
     image_path = os.path.join(self.run_params.outdir, f"{self.run_params.timestring}_%05d.png")
     temp_mp4_path = f"/content/{self.run_params.timestring}_temp.mp4"
 
-    command = f'ffmpeg -y -vcodec png -r {self.fps} -start_number "0" -i "{image_path}" -frames:v {self.animation_params.max_frames} -c:v libx264 -vf fps="{fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
+    command = f'ffmpeg -y -vcodec png -r {self.fps} -start_number "0" -i "{image_path}" -frames:v {self.animation_params.max_frames} -c:v libx264 -vf fps="{self.fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
     os.system(command)
 
     postprocessed_video_path = self._post_process_video(temp_mp4_path)
@@ -114,7 +134,7 @@ class Animation():
 
     # expand prompts out to per-frame
     prompt_series = pd.Series([np.nan for a in range(self.animation_params.max_frames)])
-    for i, prompt in animation_prompts.items():
+    for i, prompt in self.prompts.items():
         prompt_series[i] = prompt
     prompt_series = prompt_series.ffill().bfill()
 
@@ -150,14 +170,14 @@ class Animation():
 
                 if anim_args["animation_mode"] == '2D':
                     if advance_prev:
-                        turbo_prev_image = anim_frame_warp_2d(turbo_prev_image, self.run_params, anim_args, keys, tween_frame_idx)
+                        turbo_prev_image = util.anim_frame_warp_2d(turbo_prev_image, self.run_params, anim_args, keys, tween_frame_idx)
                     if advance_next:
-                        turbo_next_image = anim_frame_warp_2d(turbo_next_image, self.run_params, anim_args, keys, tween_frame_idx)
+                        turbo_next_image = util.anim_frame_warp_2d(turbo_next_image, self.run_params, anim_args, keys, tween_frame_idx)
                 else: # '3D'
                     if advance_prev:
-                        turbo_prev_image = anim_frame_warp_3d(turbo_prev_image, depth, anim_args, keys, tween_frame_idx)
+                        turbo_prev_image = util.anim_frame_warp_3d(turbo_prev_image, depth, anim_args, keys, tween_frame_idx, device=self.device)
                     if advance_next:
-                        turbo_next_image = anim_frame_warp_3d(turbo_next_image, depth, anim_args, keys, tween_frame_idx)
+                        turbo_next_image = util.anim_frame_warp_3d(turbo_next_image, depth, anim_args, keys, tween_frame_idx, device=self.device)
                 turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                 if turbo_prev_image is not None and tween < 1.0:
@@ -170,35 +190,35 @@ class Animation():
                 if anim_args["save_depth_maps"]:
                     self.depth_model.save(os.path.join(self.run_params.outdir, f"{self.run_params.timestring}_depth_{tween_frame_idx:05}.png"), depth)
             if turbo_next_image is not None:
-                prev_sample = sample_from_cv2(turbo_next_image)
+                prev_sample = util.sample_from_cv2(turbo_next_image)
 
         # apply transforms to previous frame
         if prev_sample is not None:
             if anim_args["animation_mode"] == '2D':
-                prev_img = anim_frame_warp_2d(sample_to_cv2(prev_sample), args, anim_args, keys, frame_idx)
+                prev_img = util.anim_frame_warp_2d(util.sample_to_cv2(prev_sample), self.run_params, anim_args, keys, frame_idx)
             else: # '3D'
-                prev_img_cv2 = sample_to_cv2(prev_sample)
+                prev_img_cv2 = util.sample_to_cv2(prev_sample)
                 depth = self.depth_model.predict(prev_img_cv2, anim_args) if self.depth_model else None
-                prev_img = anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx)
+                prev_img = util.anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx, device=self.devic)
 
             # apply color matching
             if anim_args["color_coherence"] != 'None':
                 if color_match_sample is None:
                     color_match_sample = prev_img.copy()
                 else:
-                    prev_img = maintain_colors(prev_img, color_match_sample, anim_args["color_coherence"])
+                    prev_img = util.maintain_colors(prev_img, color_match_sample, anim_args["color_coherence"])
 
             # apply scaling
             contrast_sample = prev_img * contrast
             # apply frame noising
-            noised_sample = add_noise(sample_from_cv2(contrast_sample), noise)
+            noised_sample = util.add_noise(util.sample_from_cv2(contrast_sample), noise)
 
             # use transformed previous frame as init for current
             self.run_params.use_init = True
-            if half_precision:
-                self.run_params.init_sample = noised_sample.half().to(device)
+            if self.model_loader.half_precision:
+                self.run_params.init_sample = noised_sample.half().to(self.device)
             else:
-                self.run_params.init_sample = noised_sample.to(device)
+                self.run_params.init_sample = noised_sample.to(self.device)
             self.run_params.strength = max(0.0, min(1.0, strength))
 
         # grab prompt for current frame
@@ -206,26 +226,165 @@ class Animation():
         print(f"{self.run_params.prompt} {self.run_params.seed}")
 
         # sample the diffusion model
-        sample, image = generate(self.run_params, return_latent=False, return_sample=True)
+        sample, image = self._generate_single_frame(return_latent=False, return_sample=True)
         prev_sample = sample
 
         if turbo_steps > 1:
             turbo_prev_image, turbo_prev_frame_idx = turbo_next_image, turbo_next_frame_idx
-            turbo_next_image, turbo_next_frame_idx = sample_to_cv2(sample, type=np.float32), frame_idx
+            turbo_next_image, turbo_next_frame_idx = util.sample_to_cv2(sample, type=np.float32), frame_idx
             frame_idx += turbo_steps
         else:    
             filename = f"{self.run_params.timestring}_{frame_idx:05}.png"
             image.save(os.path.join(self.run_params.outdir, filename))
             if anim_args["save_depth_maps"]:
                 if depth is None:
-                    depth = self.depth_model.predict(sample_to_cv2(sample), anim_args)
+                    depth = self.depth_model.predict(util.sample_to_cv2(sample), anim_args)
                 self.depth_model.save(os.path.join(self.run_params.outdir, f"{self.run_params.timestring}_depth_{frame_idx:05}.png"), depth)
             frame_idx += 1
 
-        display.clear_output(wait=True)
-        display.display(image)
+        self.run_params.seed = util.next_seed(self.run_params)
+  
+  def _generate_single_frame(self, return_latent=False, return_sample=False, return_c=False):
+    seed_everything(self.run_params.seed)
+    os.makedirs(self.run_params.outdir, exist_ok=True)
 
-        self.run_params.seed = next_seed(self.run_params)
+    sampler = PLMSSampler(self.model) if self.run_params.sampler == 'plms' else DDIMSampler(self.model)
+    model_wrap = CompVisDenoiser(self.model)
+    batch_size = self.run_params.n_samples
+    prompt = self.run_params.prompt
+    assert prompt is not None
+    data = [batch_size * [prompt]]
+    precision_scope = autocast if self.run_params.precision == "autocast" else nullcontext
+
+    init_latent = None
+    mask_image = None
+    init_image = None
+    if self.run_params.init_latent is not None:
+        init_latent = self.run_params.init_latent
+    elif self.run_params.init_sample is not None:
+        with precision_scope("cuda"):
+            init_latent = self.model.get_first_stage_encoding(self.model.encode_first_stage(self.run_params.init_sample))
+    elif self.run_params.use_init and self.run_params.init_image != None and self.run_params.init_image != '':
+        init_image, mask_image = util.load_img(self.run_params.init_image, 
+                                          shape=(self.run_params.W, self.run_params.H),  
+                                          use_alpha_as_mask=self.run_params.use_alpha_as_mask)
+        init_image = init_image.to(self.device)
+        init_image = repeat(init_image, '1 ... -> b ...', b=batch_size)
+        with precision_scope("cuda"):
+            init_latent = self.model.get_first_stage_encoding(self.model.encode_first_stage(init_image))  # move to latent space        
+
+    if not self.run_params.use_init and self.run_params.strength > 0 and self.run_params.strength_0_no_init:
+        print("\nNo init image, but strength > 0. Strength has been auto set to 0, since use_init is False.")
+        print("If you want to force strength > 0 with no init, please set strength_0_no_init to False.\n")
+        self.run_params.strength = 0
+
+    # Mask functions
+    if self.run_params.use_mask:
+        assert self.run_params.mask_file is not None or mask_image is not None, "use_mask==True: An mask image is required for a mask. Please enter a mask_file or use an init image with an alpha channel"
+        assert self.run_params.use_init, "use_mask==True: use_init is required for a mask"
+        assert init_latent is not None, "use_mask==True: An latent init image is required for a mask"
+
+        mask = util.prepare_mask(self.run_params.mask_file if mask_image is None else mask_image, 
+                            init_latent.shape, 
+                            self.run_params.mask_contrast_adjust, 
+                            self.run_params.mask_brightness_adjust)
+        
+        if (torch.all(mask == 0) or torch.all(mask == 1)) and self.run_params.use_alpha_as_mask:
+            raise Warning("use_alpha_as_mask==True: Using the alpha channel from the init image as a mask, but the alpha channel is blank.")
+        
+        mask = mask.to(self.device)
+        mask = repeat(mask, '1 ... -> b ...', b=batch_size)
+    else:
+        mask = None
+        
+    t_enc = int((1.0-self.run_params.strength) * self.run_params.steps)
+
+    # Noise schedule for the k-diffusion samplers (used for masking)
+    k_sigmas = model_wrap.get_sigmas(self.run_params.steps)
+    k_sigmas = k_sigmas[len(k_sigmas)-t_enc-1:]
+
+    if self.run_params.sampler in ['plms','ddim']:
+        sampler.make_schedule(ddim_num_steps=self.run_params.steps, ddim_eta=self.run_params.ddim_eta, ddim_discretize='fill', verbose=False)
+
+    callback = util.make_callback(sampler_name=self.run_params.sampler,
+                                  device=self.device,
+                                  dynamic_threshold=self.run_params.dynamic_threshold, 
+                                  static_threshold=self.run_params.static_threshold,
+                                  mask=mask, 
+                                  init_latent=init_latent,
+                                  sigmas=k_sigmas,
+                                  sampler=sampler)    
+
+    results = []
+    with torch.no_grad():
+        with precision_scope("cuda"):
+            with self.model.ema_scope():
+                for prompts in data:
+                    uc = None
+                    if self.run_params.scale != 1.0:
+                        uc = self.model.get_learned_conditioning(batch_size * [""])
+                    if isinstance(prompts, tuple):
+                        prompts = list(prompts)
+                    c = self.model.get_learned_conditioning(prompts)
+
+                    if self.run_params.init_c != None:
+                        c = self.run_params.init_c
+
+                    if self.run_params.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
+                        samples = sampler_fn(
+                            c=c, 
+                            uc=uc, 
+                            args=self.run_params, 
+                            model_wrap=model_wrap, 
+                            init_latent=init_latent, 
+                            t_enc=t_enc, 
+                            device=self.device, 
+                            cb=callback)
+                    else:
+                        # self.run_params.sampler == 'plms' or args.sampler == 'ddim':
+                        if init_latent is not None and self.run_params.strength > 0:
+                            z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(self.device))
+                        else:
+                            z_enc = torch.randn([self.run_params.n_samples, self.run_params.C, self.run_params.H // self.run_params.f, self.run_params.W // self.run_params.f], device=self.device)
+                        if self.run_params.sampler == 'ddim':
+                            samples = sampler.decode(z_enc, 
+                                                     c, 
+                                                     t_enc, 
+                                                     unconditional_guidance_scale=self.run_params.scale,
+                                                     unconditional_conditioning=uc,
+                                                     img_callback=callback)
+                        elif self.run_params.sampler == 'plms': # no "decode" function in plms, so use "sample"
+                            shape = [self.run_params.C, self.run_params.H // self.run_params.f, self.run_params.W // self.run_params.f]
+                            samples, _ = sampler.sample(S=self.run_params.steps,
+                                                            conditioning=c,
+                                                            batch_size=self.run_params.n_samples,
+                                                            shape=shape,
+                                                            verbose=False,
+                                                            unconditional_guidance_scale=self.run_params.scale,
+                                                            unconditional_conditioning=uc,
+                                                            eta=self.run_params.ddim_eta,
+                                                            x_T=z_enc,
+                                                            img_callback=callback)
+                        else:
+                            raise Exception(f"Sampler {self.run_params.sampler} not recognised.")
+
+                    if return_latent:
+                        results.append(samples.clone())
+
+                    x_samples = self.model.decode_first_stage(samples)
+                    if return_sample:
+                        results.append(x_samples.clone())
+
+                    x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+
+                    if return_c:
+                        results.append(c.clone())
+
+                    for x_sample in x_samples:
+                        x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+                        image = Image.fromarray(x_sample.astype(np.uint8))
+                        results.append(image)
+    return results
 
 if __name__ == "__main__":
     prompts = {
