@@ -10,3 +10,6 @@
 [submodule "pytorch3d-lite"]
 	path = pytorch3d-lite
 	url = https://github.com/MSFTserver/pytorch3d-lite.git
+[submodule "k-diffusion"]
+	path = k-diffusion
+	url = https://github.com/pietrobolcato/k-diffusion.git
