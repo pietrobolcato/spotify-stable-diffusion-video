@@ -12,21 +12,24 @@ sys.path.extend([
 
 import os
 import subprocess
+import numpy as np
 from animation_params import AnimationParams
 from run_params import RunParams
 from helpers import DepthModel, sampler_fn
 from base64 import b64encode
 
+# TODO: move config to a separate file or argparse
+models_path = "/content/drive/MyDrive/AI/Stable_Diffusion/"
+
 FPS = 10
-MAX_FRAMES = 50
 
 class Animation():
-  def __init__(self, batch_name, init_image, prompts, song, motion_type = "random", **kwargs):
+  def __init__(self, out_path, batch_name, init_image, prompts, song, motion_type = "random", **kwargs):
     self.animation_params = AnimationParams(motion_type, **kwargs)
-    self.run_params = RunParams(batch_name, init_image, prompts)
+    self.run_params = RunParams(out_path, batch_name, init_image, prompts)
     self.song = song
     self.fps = kwargs.get('fps', FPS) # TODO: move in run_params
-    self.max_frames = kwargs.get('max_frames', MAX_FRAMES) # TODO: move in run_params
+    self.device = "cuda"
     self.depth_model = self._load_depth_model()
 
   def run(self):
@@ -40,7 +43,6 @@ class Animation():
     ret = f"-- General params:\n" + \
           f"song: {self.song}\n" + \
           f"fps: {self.fps}\n" + \
-          f"max_frames: {self.max_frames}\n" + \
           f"\n" + \
           f"-- Animation params:\n" + \
           f"{self.animation_params}"
@@ -50,7 +52,7 @@ class Animation():
   def _load_depth_model(self):
     predict_depths = (self.animation_params.anim_args["animation_mode"] == "3D" and self.animation_params.anim_args["use_depth_warping"]) or self.animation_params.anim_args["save_depth_maps"]
     if predict_depths:
-        depth_model = DepthModel(device)
+        depth_model = DepthModel(self.device)
         depth_model.load_midas(models_path)
         if self.animation_params.anim_args["midas_weight"] < 1.0:
             depth_model.load_adabins()
@@ -64,7 +66,7 @@ class Animation():
     image_path = os.path.join(self.run_params.outdir, f"{self.run_params.timestring}_%05d.png")
     temp_mp4_path = f"/content/{self.run_params.timestring}_temp.mp4"
 
-    command = f'ffmpeg -y -vcodec png -r {self.fps} -start_number "0" -i "{image_path}" -frames:v {self.max_frames} -c:v libx264 -vf fps="{fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
+    command = f'ffmpeg -y -vcodec png -r {self.fps} -start_number "0" -i "{image_path}" -frames:v {self.animation_params.max_frames} -c:v libx264 -vf fps="{fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
     os.system(command)
 
     postprocessed_video_path = self._post_process_video(temp_mp4_path)
@@ -111,7 +113,7 @@ class Animation():
         json.dump(settings_dict, settings_file, ensure_ascii=False, indent=4)
 
     # expand prompts out to per-frame
-    prompt_series = pd.Series([np.nan for a in range(self.max_frames)])
+    prompt_series = pd.Series([np.nan for a in range(self.animation_params.max_frames)])
     for i, prompt in animation_prompts.items():
         prompt_series[i] = prompt
     prompt_series = prompt_series.ffill().bfill()
@@ -125,8 +127,8 @@ class Animation():
     frame_idx = 0
     prev_sample = None
     
-    while frame_idx < self.max_frames:
-        print(f"Rendering animation frame {frame_idx} of {self.max_frames}")
+    while frame_idx < self.animation_params.max_frames:
+        print(f"Rendering animation frame {frame_idx} of {self.animation_params.max_frames}")
         noise = keys.noise_schedule_series[frame_idx]
         strength = keys.strength_schedule_series[frame_idx]
         contrast = keys.contrast_schedule_series[frame_idx]
@@ -224,3 +226,17 @@ class Animation():
         display.display(image)
 
         self.run_params.seed = next_seed(self.run_params)
+
+if __name__ == "__main__":
+    prompts = {
+      0: "LSD acid blotter art featuring a face, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
+      30: "LSD acid blotter art featuring the planet earth in space, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
+    }
+
+    generation = Animation(batch_name="rlon_test_AIO",
+                          out_path="/",
+                          init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
+                          prompts=prompts,
+                          song="as_it_was",
+                          motion_type="random")
+    generation.run()
