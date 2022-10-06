@@ -1,3 +1,6 @@
 [submodule "stable-diffusion"]
 	path = stable-diffusion
 	url = https://github.com/deforum/stable-diffusion
+[submodule "AdaBins"]
+	path = AdaBins
+	url = https://github.com/shariqfarooq123/AdaBins.git
