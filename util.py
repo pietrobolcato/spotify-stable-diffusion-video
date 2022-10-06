@@ -184,7 +184,7 @@ def anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx, device):
         math.radians(keys.rotation_3d_z_series[frame_idx])
     ]
     rot_mat = p3d.euler_angles_to_matrix(torch.tensor(rotate_xyz, device=device), "XYZ").unsqueeze(0)
-    result = transform_image_3d(prev_img_cv2, depth, rot_mat, translate_xyz, anim_args)
+    result = transform_image_3d(prev_img_cv2, depth, rot_mat, translate_xyz, anim_args, device)
     torch.cuda.empty_cache()
     return result
 

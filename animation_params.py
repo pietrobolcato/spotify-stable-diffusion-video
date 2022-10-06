@@ -83,8 +83,8 @@ class AnimationParams():
 
     def _generate_random_motion_params(self):
       trans_z = "0:(4)"
-      rot_3d_x = f"0:({random.uniform(0., 3.)})"
-      rot_3d_y = f"0:({random.uniform(0., 3.)})"
+      rot_3d_x = f"0:({random.uniform(0., 1.)})"
+      rot_3d_y = f"0:({random.uniform(0., 1.)})"
       rot_3d_z = "0:(0)"
 
       mid_change_frame = random.randint(18, 35)

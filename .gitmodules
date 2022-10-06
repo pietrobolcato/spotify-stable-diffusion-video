@@ -13,3 +13,6 @@
 [submodule "k-diffusion"]
 	path = k-diffusion
 	url = https://github.com/pietrobolcato/k-diffusion.git
+[submodule "taming-transformers"]
+	path = taming-transformers
+	url = https://github.com/CompVis/taming-transformers.git

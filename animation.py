@@ -1,7 +1,7 @@
 import sys
 
 sys.path.extend([
-    'src/taming-transformers',
+    'taming-transformers',
     'src/clip',
     'stable-diffusion/',
     'k-diffusion',
@@ -83,6 +83,7 @@ class Animation():
     return depth_model
 
   def _generate_video_from_frames(self):
+    # TODO: have better path management
     image_path = os.path.join(self.run_params.outdir, f"{self.run_params.timestring}_%05d.png")
     temp_mp4_path = f"/content/{self.run_params.timestring}_temp.mp4"
 
@@ -199,7 +200,7 @@ class Animation():
             else: # '3D'
                 prev_img_cv2 = util.sample_to_cv2(prev_sample)
                 depth = self.depth_model.predict(prev_img_cv2, anim_args) if self.depth_model else None
-                prev_img = util.anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx, device=self.devic)
+                prev_img = util.anim_frame_warp_3d(prev_img_cv2, depth, anim_args, keys, frame_idx, device=self.device)
 
             # apply color matching
             if anim_args["color_coherence"] != 'None':
@@ -393,9 +394,10 @@ if __name__ == "__main__":
     }
 
     generation = Animation(batch_name="rlon_test_AIO",
-                          out_path="/",
+                          out_path="/content/out/",
                           init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
                           prompts=prompts,
                           song="as_it_was",
                           motion_type="random")
+
     generation.run()
