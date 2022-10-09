@@ -3,11 +3,11 @@ import random
 import pandas as pd
 import numpy as np
 
-MAX_FRAMES = 50
+MAX_FRAMES = 200
 TRANS_Z = "0:(4) 19: (4) 26: (7)"
 ROT_3D_X = "0: (0)"
 ROT_3D_Y = "0: (0)"
-ROT_3D_Z = "0:(0) 19: (0) 26: (3)"
+ROT_3D_Z = "0:(0) 19: (0) 26: (3) 50: (3.) 60: (0.)"
 
 
 class AnimationParams:
@@ -79,7 +79,7 @@ class AnimationParams:
 
         animation_mode = "3D"
         max_frames = 50
-        border = "wrap"
+        border = "replicate"
 
         angle = "0:(0)"
         zoom = "0:(1.04)"
@@ -87,9 +87,7 @@ class AnimationParams:
         translation_y = "0:(0)"
 
         noise_schedule = "0: (0.02) "
-        strength_schedule = (
-            "0: (0.9) 20: (0.8) 30: (0.5) 34: (0.4) 36: (0.3) 38: (0.75)"
-        )
+        strength_schedule = "0: (0.9) 20: (0.8) 30: (0.5) 34: (0.4) 36: (0.3) 38: (0.75) 50: (0.05) 100: (0.3)"
         contrast_schedule = "0: (1.0)"
 
         color_coherence = "None"

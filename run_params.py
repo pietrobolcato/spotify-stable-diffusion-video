@@ -2,7 +2,7 @@ import random
 import time
 from util import get_output_folder
 
-SEED = -1
+SEED = 3664512517
 
 
 class RunParams:
@@ -58,6 +58,10 @@ class RunParams:
         self.init_latent = None
         self.init_sample = None
         self.init_c = None
+
+        self.prompt_weighting = False
+        self.normalize_prompt_weights = True
+        self.log_weighted_subprompts = False
 
         if self.seed == -1:
             self.seed = random.randint(0, 2**32 - 1)

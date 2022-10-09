@@ -369,7 +369,7 @@ class Animation:
             self.run_params.seed = util.next_seed(self.run_params)
 
     def _generate_single_frame(
-        self, return_latent=False, return_sample=False, return_c=False
+        self, frame=0, return_latent=False, return_sample=False, return_c=False
     ):
         seed_everything(self.run_params.seed)
         os.makedirs(self.run_params.outdir, exist_ok=True)
@@ -428,36 +428,12 @@ class Animation:
             )
             self.run_params.strength = 0
 
-        # Mask functions
-        if self.run_params.use_mask:
-            assert (
-                self.run_params.mask_file is not None or mask_image is not None
-            ), "use_mask==True: An mask image is required for a mask. Please enter a mask_file or use an init image with an alpha channel"
-            assert (
-                self.run_params.use_init
-            ), "use_mask==True: use_init is required for a mask"
-            assert (
-                init_latent is not None
-            ), "use_mask==True: An latent init image is required for a mask"
+        mask = None
 
-            mask = util.prepare_mask(
-                self.run_params.mask_file if mask_image is None else mask_image,
-                init_latent.shape,
-                self.run_params.mask_contrast_adjust,
-                self.run_params.mask_brightness_adjust,
-            )
-
-            if (
-                torch.all(mask == 0) or torch.all(mask == 1)
-            ) and self.run_params.use_alpha_as_mask:
-                raise Warning(
-                    "use_alpha_as_mask==True: Using the alpha channel from the init image as a mask, but the alpha channel is blank."
-                )
-
-            mask = mask.to(self.device)
-            mask = repeat(mask, "1 ... -> b ...", b=batch_size)
-        else:
-            mask = None
+        assert not (
+            (self.run_params.use_mask and self.run_params.overlay_mask)
+            and (self.run_params.init_sample is None and init_image is None)
+        ), "Need an init image when use_mask == True and overlay_mask == True"
 
         t_enc = int((1.0 - self.run_params.strength) * self.run_params.steps)
 
@@ -473,29 +449,33 @@ class Animation:
                 verbose=False,
             )
 
-        callback = util.make_callback(
-            sampler_name=self.run_params.sampler,
-            device=self.device,
-            dynamic_threshold=self.run_params.dynamic_threshold,
-            static_threshold=self.run_params.static_threshold,
+        callback = util.SamplerCallback(
+            args=self.run_params,
             mask=mask,
             init_latent=init_latent,
             sigmas=k_sigmas,
             sampler=sampler,
-        )
+            verbose=False,
+            device=self.device,
+        ).callback
 
         results = []
         with torch.no_grad():
             with precision_scope("cuda"):
                 with self.model.ema_scope():
                     for prompts in data:
-                        uc = None
-                        if self.run_params.scale != 1.0:
-                            uc = self.model.get_learned_conditioning(batch_size * [""])
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
-                        c = self.model.get_learned_conditioning(prompts)
+                        if self.run_params.prompt_weighting:
+                            uc, c = util.get_uc_and_c(
+                                prompts, self.model, self.run_params, frame
+                            )
+                        else:
+                            uc = self.model.get_learned_conditioning(batch_size * [""])
+                            c = self.model.get_learned_conditioning(prompts)
 
+                        if self.run_params.scale == 1.0:
+                            uc = None
                         if self.run_params.init_c != None:
                             c = self.run_params.init_c
 
@@ -518,7 +498,7 @@ class Animation:
                                 cb=callback,
                             )
                         else:
-                            # self.run_params.sampler == 'plms' or args.sampler == 'ddim':
+                            # args.sampler == 'plms' or args.sampler == 'ddim':
                             if init_latent is not None and self.run_params.strength > 0:
                                 z_enc = sampler.stochastic_encode(
                                     init_latent,
@@ -572,6 +552,7 @@ class Animation:
                             results.append(samples.clone())
 
                         x_samples = self.model.decode_first_stage(samples)
+
                         if return_sample:
                             results.append(x_samples.clone())
 
@@ -594,7 +575,8 @@ class Animation:
 if __name__ == "__main__":
     prompts = {
         0: "LSD acid blotter art featuring a face, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
-        30: "LSD acid blotter art featuring the planet earth in space, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
+        30: "LSD acid blotter art featuring the amazonian forest, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
+        50: "LSD acid blotter art featuring smiling and sad faces, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
     }
 
     generation = Animation(
@@ -603,7 +585,7 @@ if __name__ == "__main__":
         init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
         prompts=prompts,
         song="as_it_was",
-        motion_type="random",
+        motion_type="default",
     )
 
     generation.run()
