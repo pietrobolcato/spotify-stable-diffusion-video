@@ -15,5 +15,6 @@ ftfy
 matplotlib
 resize-right
 torchdiffeq
+pre-commit
 git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
 git+https://github.com/openai/CLIP.git@main#egg=clip
