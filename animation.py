@@ -86,18 +86,10 @@ class Animation:
         return ret
 
     def _load_depth_model(self):
-        predict_depths = (
-            self.animation_params.anim_args["animation_mode"] == "3D"
-            and self.animation_params.anim_args["use_depth_warping"]
-        ) or self.animation_params.anim_args["save_depth_maps"]
-        if predict_depths:
-            depth_model = DepthModel(self.device)
-            depth_model.load_midas(models_path)
-            if self.animation_params.anim_args["midas_weight"] < 1.0:
-                depth_model.load_adabins()
-        else:
-            depth_model = None
-            self.animation_params.anim_args["save_depth_maps"] = False
+        depth_model = DepthModel(self.device)
+        depth_model.load_midas(models_path)
+        if self.animation_params.anim_args["midas_weight"] < 1.0:
+            depth_model.load_adabins()
 
         return depth_model
 
@@ -214,46 +206,27 @@ class Animation:
                     )
                     advance_next = tween_frame_idx > turbo_next_frame_idx
 
-                    if self.depth_model is not None:
-                        assert turbo_next_image is not None
-                        depth = self.depth_model.predict(turbo_next_image, anim_args)
+                    assert turbo_next_image is not None
+                    depth = self.depth_model.predict(turbo_next_image, anim_args)
 
-                    if anim_args["animation_mode"] == "2D":
-                        if advance_prev:
-                            turbo_prev_image = util.anim_frame_warp_2d(
-                                turbo_prev_image,
-                                self.run_params,
-                                anim_args,
-                                keys,
-                                tween_frame_idx,
-                            )
-                        if advance_next:
-                            turbo_next_image = util.anim_frame_warp_2d(
-                                turbo_next_image,
-                                self.run_params,
-                                anim_args,
-                                keys,
-                                tween_frame_idx,
-                            )
-                    else:  # '3D'
-                        if advance_prev:
-                            turbo_prev_image = util.anim_frame_warp_3d(
-                                turbo_prev_image,
-                                depth,
-                                anim_args,
-                                keys,
-                                tween_frame_idx,
-                                device=self.device,
-                            )
-                        if advance_next:
-                            turbo_next_image = util.anim_frame_warp_3d(
-                                turbo_next_image,
-                                depth,
-                                anim_args,
-                                keys,
-                                tween_frame_idx,
-                                device=self.device,
-                            )
+                    if advance_prev:
+                        turbo_prev_image = util.anim_frame_warp_3d(
+                            turbo_prev_image,
+                            depth,
+                            anim_args,
+                            keys,
+                            tween_frame_idx,
+                            device=self.device,
+                        )
+                    if advance_next:
+                        turbo_next_image = util.anim_frame_warp_3d(
+                            turbo_next_image,
+                            depth,
+                            anim_args,
+                            keys,
+                            tween_frame_idx,
+                            device=self.device,
+                        )
                     turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                     if turbo_prev_image is not None and tween < 1.0:
@@ -268,42 +241,25 @@ class Animation:
                         os.path.join(self.run_params.outdir, filename),
                         cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR),
                     )
-                    if anim_args["save_depth_maps"]:
-                        self.depth_model.save(
-                            os.path.join(
-                                self.run_params.outdir,
-                                f"{self.run_params.timestring}_depth_{tween_frame_idx:05}.png",
-                            ),
-                            depth,
-                        )
                 if turbo_next_image is not None:
                     prev_sample = util.sample_from_cv2(turbo_next_image)
 
             # apply transforms to previous frame
             if prev_sample is not None:
-                if anim_args["animation_mode"] == "2D":
-                    prev_img = util.anim_frame_warp_2d(
-                        util.sample_to_cv2(prev_sample),
-                        self.run_params,
-                        anim_args,
-                        keys,
-                        frame_idx,
-                    )
-                else:  # '3D'
-                    prev_img_cv2 = util.sample_to_cv2(prev_sample)
-                    depth = (
-                        self.depth_model.predict(prev_img_cv2, anim_args)
-                        if self.depth_model
-                        else None
-                    )
-                    prev_img = util.anim_frame_warp_3d(
-                        prev_img_cv2,
-                        depth,
-                        anim_args,
-                        keys,
-                        frame_idx,
-                        device=self.device,
-                    )
+                prev_img_cv2 = util.sample_to_cv2(prev_sample)
+                depth = (
+                    self.depth_model.predict(prev_img_cv2, anim_args)
+                    if self.depth_model
+                    else None
+                )
+                prev_img = util.anim_frame_warp_3d(
+                    prev_img_cv2,
+                    depth,
+                    anim_args,
+                    keys,
+                    frame_idx,
+                    device=self.device,
+                )
 
                 # apply color matching
                 if anim_args["color_coherence"] != "None":
@@ -389,7 +345,6 @@ class Animation:
         )
 
         init_latent = None
-        mask_image = None
         init_image = None
         if self.run_params.init_latent is not None:
             init_latent = self.run_params.init_latent
@@ -403,10 +358,8 @@ class Animation:
             and self.run_params.init_image != None
             and self.run_params.init_image != ""
         ):
-            init_image, mask_image = util.load_img(
-                self.run_params.init_image,
-                shape=(self.run_params.W, self.run_params.H),
-                use_alpha_as_mask=self.run_params.use_alpha_as_mask,
+            init_image = util.load_img(
+                self.run_params.init_image, shape=(self.run_params.W, self.run_params.H)
             )
             init_image = init_image.to(self.device)
             init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
@@ -429,11 +382,6 @@ class Animation:
             self.run_params.strength = 0
 
         mask = None
-
-        assert not (
-            (self.run_params.use_mask and self.run_params.overlay_mask)
-            and (self.run_params.init_sample is None and init_image is None)
-        ), "Need an init image when use_mask == True and overlay_mask == True"
 
         t_enc = int((1.0 - self.run_params.strength) * self.run_params.steps)
 

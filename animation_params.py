@@ -3,7 +3,7 @@ import random
 import pandas as pd
 import numpy as np
 
-MAX_FRAMES = 200
+MAX_FRAMES = 60
 TRANS_Z = "0:(4) 19: (4) 26: (7)"
 ROT_3D_X = "0: (0)"
 ROT_3D_Y = "0: (0)"
@@ -77,7 +77,6 @@ class AnimationParams:
         rotation_3d_y = kwargs.get("rotation_3d_y", ROT_3D_Y)
         rotation_3d_z = kwargs.get("rotation_3d_z", ROT_3D_Z)
 
-        animation_mode = "3D"
         max_frames = 50
         border = "replicate"
 
@@ -100,7 +99,6 @@ class AnimationParams:
         fov = 40
         padding_mode = "border"
         sampling_mode = "bicubic"
-        save_depth_maps = False
 
         return locals()
 
