@@ -23,23 +23,41 @@ class RunParams:
         self.save_settings = True
         self.display_samples = True
 
-        self.n_samples = 1
         self.n_batch = 1
         self.batch_name = batch_name
         self.filename_format = "{timestring}_{index}.png"
         self.seed_behavior = "iter"
+        self.make_grid = False
+        self.grid_rows = 2
         self.outdir = get_output_folder(output_path, batch_name)
 
         self.use_init = True
         self.strength = 1
+        self.strength_0_no_init = (
+            True  # Set the strength to 0 automatically when no init image is used
+        )
         self.init_image = init_image
+        # Whiter areas of the mask are areas that change more
+        self.use_mask = False
+        self.use_alpha_as_mask = (
+            False  # use the alpha channel of the init image as the mask
+        )
+        self.mask_file = "https://www.filterforge.com/wiki/images/archive/b/b7/20080927223728%21Polygonal_gradient_thumb.jpg"
+        self.invert_mask = False
+        # Adjust mask image, 1.0 is no adjustment. Should be positive numbers.
+        self.mask_brightness_adjust = 1.0
+        self.mask_contrast_adjust = 1.0
 
+        self.n_samples = 1  # doesnt do anything
         self.precision = "autocast"
         self.C = 4
         self.f = 8
 
         self.prompts = prompts
         self.timestring = time.strftime("%Y%m%d_-_%H_%M_%S")
+        self.init_latent = None
+        self.init_sample = None
+        self.init_c = None
 
         self.prompt_weighting = False
         self.normalize_prompt_weights = True

@@ -23,22 +23,33 @@ def get_output_folder(output_path, batch_folder):
     return out_path
 
 
-def load_img(path, shape):
+def load_img(path, shape, use_alpha_as_mask=False):
     # use_alpha_as_mask: Read the alpha channel of the image as the mask image
     if path.startswith("http://") or path.startswith("https://"):
         image = Image.open(requests.get(path, stream=True).raw)
     else:
         image = Image.open(path)
 
-    image = image.convert("RGB")
+    if use_alpha_as_mask:
+        image = image.convert("RGBA")
+    else:
+        image = image.convert("RGB")
+
     image = image.resize(shape, resample=Image.LANCZOS)
+
+    mask_image = None
+    if use_alpha_as_mask:
+        # Split alpha channel into a mask_image
+        red, green, blue, alpha = Image.Image.split(image)
+        mask_image = alpha.convert("L")
+        image = image.convert("RGB")
 
     image = np.array(image).astype(np.float16) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
     image = 2.0 * image - 1.0
 
-    return image
+    return image, mask_image
 
 
 def prepare_mask(

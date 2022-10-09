@@ -86,11 +86,18 @@ class Animation:
         return ret
 
     def _load_depth_model(self):
-        depth_model = DepthModel(self.device)
-        depth_model.load_midas(models_path)
-
-        if self.animation_params.anim_args["midas_weight"] < 1.0:
-            depth_model.load_adabins()
+        predict_depths = (
+            self.animation_params.anim_args["animation_mode"] == "3D"
+            and self.animation_params.anim_args["use_depth_warping"]
+        ) or self.animation_params.anim_args["save_depth_maps"]
+        if predict_depths:
+            depth_model = DepthModel(self.device)
+            depth_model.load_midas(models_path)
+            if self.animation_params.anim_args["midas_weight"] < 1.0:
+                depth_model.load_adabins()
+        else:
+            depth_model = None
+            self.animation_params.anim_args["save_depth_maps"] = False
 
         return depth_model
 
@@ -211,25 +218,42 @@ class Animation:
                         assert turbo_next_image is not None
                         depth = self.depth_model.predict(turbo_next_image, anim_args)
 
-                    # apply 3D animation warping
-                    if advance_prev:
-                        turbo_prev_image = util.anim_frame_warp_3d(
-                            turbo_prev_image,
-                            depth,
-                            anim_args,
-                            keys,
-                            tween_frame_idx,
-                            device=self.device,
-                        )
-                    if advance_next:
-                        turbo_next_image = util.anim_frame_warp_3d(
-                            turbo_next_image,
-                            depth,
-                            anim_args,
-                            keys,
-                            tween_frame_idx,
-                            device=self.device,
-                        )
+                    if anim_args["animation_mode"] == "2D":
+                        if advance_prev:
+                            turbo_prev_image = util.anim_frame_warp_2d(
+                                turbo_prev_image,
+                                self.run_params,
+                                anim_args,
+                                keys,
+                                tween_frame_idx,
+                            )
+                        if advance_next:
+                            turbo_next_image = util.anim_frame_warp_2d(
+                                turbo_next_image,
+                                self.run_params,
+                                anim_args,
+                                keys,
+                                tween_frame_idx,
+                            )
+                    else:  # '3D'
+                        if advance_prev:
+                            turbo_prev_image = util.anim_frame_warp_3d(
+                                turbo_prev_image,
+                                depth,
+                                anim_args,
+                                keys,
+                                tween_frame_idx,
+                                device=self.device,
+                            )
+                        if advance_next:
+                            turbo_next_image = util.anim_frame_warp_3d(
+                                turbo_next_image,
+                                depth,
+                                anim_args,
+                                keys,
+                                tween_frame_idx,
+                                device=self.device,
+                            )
                     turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                     if turbo_prev_image is not None and tween < 1.0:
@@ -244,26 +268,42 @@ class Animation:
                         os.path.join(self.run_params.outdir, filename),
                         cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR),
                     )
-
+                    if anim_args["save_depth_maps"]:
+                        self.depth_model.save(
+                            os.path.join(
+                                self.run_params.outdir,
+                                f"{self.run_params.timestring}_depth_{tween_frame_idx:05}.png",
+                            ),
+                            depth,
+                        )
                 if turbo_next_image is not None:
                     prev_sample = util.sample_from_cv2(turbo_next_image)
 
             # apply transforms to previous frame
             if prev_sample is not None:
-                prev_img_cv2 = util.sample_to_cv2(prev_sample)
-                depth = (
-                    self.depth_model.predict(prev_img_cv2, anim_args)
-                    if self.depth_model
-                    else None
-                )
-                prev_img = util.anim_frame_warp_3d(
-                    prev_img_cv2,
-                    depth,
-                    anim_args,
-                    keys,
-                    frame_idx,
-                    device=self.device,
-                )
+                if anim_args["animation_mode"] == "2D":
+                    prev_img = util.anim_frame_warp_2d(
+                        util.sample_to_cv2(prev_sample),
+                        self.run_params,
+                        anim_args,
+                        keys,
+                        frame_idx,
+                    )
+                else:  # '3D'
+                    prev_img_cv2 = util.sample_to_cv2(prev_sample)
+                    depth = (
+                        self.depth_model.predict(prev_img_cv2, anim_args)
+                        if self.depth_model
+                        else None
+                    )
+                    prev_img = util.anim_frame_warp_3d(
+                        prev_img_cv2,
+                        depth,
+                        anim_args,
+                        keys,
+                        frame_idx,
+                        device=self.device,
+                    )
 
                 # apply color matching
                 if anim_args["color_coherence"] != "None":
@@ -334,7 +374,11 @@ class Animation:
         seed_everything(self.run_params.seed)
         os.makedirs(self.run_params.outdir, exist_ok=True)
 
-        sampler = DDIMSampler(self.model)
+        sampler = (
+            PLMSSampler(self.model)
+            if self.run_params.sampler == "plms"
+            else DDIMSampler(self.model)
+        )
         model_wrap = CompVisDenoiser(self.model)
         batch_size = self.run_params.n_samples
         prompt = self.run_params.prompt
@@ -344,17 +388,52 @@ class Animation:
             autocast if self.run_params.precision == "autocast" else nullcontext
         )
 
-        init_image = util.load_img(
-            self.run_params.init_image,
-            shape=(self.run_params.W, self.run_params.H),
-        )
+        init_latent = None
+        mask_image = None
+        init_image = None
+        if self.run_params.init_latent is not None:
+            init_latent = self.run_params.init_latent
+        elif self.run_params.init_sample is not None:
+            with precision_scope("cuda"):
+                init_latent = self.model.get_first_stage_encoding(
+                    self.model.encode_first_stage(self.run_params.init_sample)
+                )
+        elif (
+            self.run_params.use_init
+            and self.run_params.init_image != None
+            and self.run_params.init_image != ""
+        ):
+            init_image, mask_image = util.load_img(
+                self.run_params.init_image,
+                shape=(self.run_params.W, self.run_params.H),
+                use_alpha_as_mask=self.run_params.use_alpha_as_mask,
+            )
+            init_image = init_image.to(self.device)
+            init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
+            with precision_scope("cuda"):
+                init_latent = self.model.get_first_stage_encoding(
+                    self.model.encode_first_stage(init_image)
+                )  # move to latent space
 
-        init_image = init_image.to(self.device)
-        init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
-        with precision_scope("cuda"):
-            init_latent = self.model.get_first_stage_encoding(
-                self.model.encode_first_stage(init_image)
-            )  # move to latent space
+        if (
+            not self.run_params.use_init
+            and self.run_params.strength > 0
+            and self.run_params.strength_0_no_init
+        ):
+            print(
+                "\nNo init image, but strength > 0. Strength has been auto set to 0, since use_init is False."
+            )
+            print(
+                "If you want to force strength > 0 with no init, please set strength_0_no_init to False.\n"
+            )
+            self.run_params.strength = 0
+
+        mask = None
+
+        assert not (
+            (self.run_params.use_mask and self.run_params.overlay_mask)
+            and (self.run_params.init_sample is None and init_image is None)
+        ), "Need an init image when use_mask == True and overlay_mask == True"
 
         t_enc = int((1.0 - self.run_params.strength) * self.run_params.steps)
 
@@ -362,9 +441,17 @@ class Animation:
         k_sigmas = model_wrap.get_sigmas(self.run_params.steps)
         k_sigmas = k_sigmas[len(k_sigmas) - t_enc - 1 :]
 
+        if self.run_params.sampler in ["plms", "ddim"]:
+            sampler.make_schedule(
+                ddim_num_steps=self.run_params.steps,
+                ddim_eta=self.run_params.ddim_eta,
+                ddim_discretize="fill",
+                verbose=False,
+            )
+
         callback = util.SamplerCallback(
             args=self.run_params,
-            mask=None,
+            mask=mask,
             init_latent=init_latent,
             sigmas=k_sigmas,
             sampler=sampler,
@@ -389,17 +476,77 @@ class Animation:
 
                         if self.run_params.scale == 1.0:
                             uc = None
+                        if self.run_params.init_c != None:
+                            c = self.run_params.init_c
 
-                        samples = sampler_fn(
-                            c=c,
-                            uc=uc,
-                            args=self.run_params,
-                            model_wrap=model_wrap,
-                            init_latent=init_latent,
-                            t_enc=t_enc,
-                            device=self.device,
-                            cb=callback,
-                        )
+                        if self.run_params.sampler in [
+                            "klms",
+                            "dpm2",
+                            "dpm2_ancestral",
+                            "heun",
+                            "euler",
+                            "euler_ancestral",
+                        ]:
+                            samples = sampler_fn(
+                                c=c,
+                                uc=uc,
+                                args=self.run_params,
+                                model_wrap=model_wrap,
+                                init_latent=init_latent,
+                                t_enc=t_enc,
+                                device=self.device,
+                                cb=callback,
+                            )
+                        else:
+                            # args.sampler == 'plms' or args.sampler == 'ddim':
+                            if init_latent is not None and self.run_params.strength > 0:
+                                z_enc = sampler.stochastic_encode(
+                                    init_latent,
+                                    torch.tensor([t_enc] * batch_size).to(self.device),
+                                )
+                            else:
+                                z_enc = torch.randn(
+                                    [
+                                        self.run_params.n_samples,
+                                        self.run_params.C,
+                                        self.run_params.H // self.run_params.f,
+                                        self.run_params.W // self.run_params.f,
+                                    ],
+                                    device=self.device,
+                                )
+                            if self.run_params.sampler == "ddim":
+                                samples = sampler.decode(
+                                    z_enc,
+                                    c,
+                                    t_enc,
+                                    unconditional_guidance_scale=self.run_params.scale,
+                                    unconditional_conditioning=uc,
+                                    img_callback=callback,
+                                )
+                            elif (
+                                self.run_params.sampler == "plms"
+                            ):  # no "decode" function in plms, so use "sample"
+                                shape = [
+                                    self.run_params.C,
+                                    self.run_params.H // self.run_params.f,
+                                    self.run_params.W // self.run_params.f,
+                                ]
+                                samples, _ = sampler.sample(
+                                    S=self.run_params.steps,
+                                    conditioning=c,
+                                    batch_size=self.run_params.n_samples,
+                                    shape=shape,
+                                    verbose=False,
+                                    unconditional_guidance_scale=self.run_params.scale,
+                                    unconditional_conditioning=uc,
+                                    eta=self.run_params.ddim_eta,
+                                    x_T=z_enc,
+                                    img_callback=callback,
+                                )
+                            else:
+                                raise Exception(
+                                    f"Sampler {self.run_params.sampler} not recognised."
+                                )
 
                         if return_latent:
                             results.append(samples.clone())
