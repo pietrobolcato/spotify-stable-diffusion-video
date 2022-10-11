@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """This module loads the required models such as Stable Diffusion, and Adabins for the animation to work"""
 
-import sys
-
-sys.path.extend(["stable-diffusion", "k-diffusion", "AdaBins", "MiDaS"])
-
 import os
 import torch
 from omegaconf import OmegaConf
-from helpers import DepthModel
-from ldm.util import instantiate_from_config
+from animation.stable_diffusion.helpers import DepthModel
+from animation.stable_diffusion.ldm.util import instantiate_from_config
 
 
 class ModelLoader:

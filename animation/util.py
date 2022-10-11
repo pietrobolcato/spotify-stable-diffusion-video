@@ -6,7 +6,7 @@ import math
 import numpy as np
 import requests
 import torchvision.transforms.functional as TF
-import py3d_tools as p3d
+import animation.pytorch3d_lite.py3d_tools as p3d
 import random
 import re
 import yaml
