@@ -1,6 +1,5 @@
-# TODO: document
-# TODO: add kwargs for parameters
-# TODO: replace print with logging
+# -*- coding: utf-8 -*-
+"""This module loads the required models such as Stable Diffusion, and Adabins for the animation to work"""
 
 import os
 import torch
@@ -10,6 +9,16 @@ from ldm.util import instantiate_from_config
 
 
 class ModelLoader:
+    """Loads diffusion and depth models
+
+    Args:
+      models_path (str): path where the models are located
+      diffusion_model_config (str, optional): the name of the diffusion model config file
+      diffusion_model_checkpoint (str, optional): the name of the diffusion model checkpoint file
+      half_precision (bool, optional): if true, loads the diffusion model in half_precision mode
+      device (str, optional): can be "cuda" or "cpu", following pytorch standards
+    """
+
     def __init__(
         self,
         models_path,
@@ -39,6 +48,11 @@ class ModelLoader:
         ), f"Diffusion checkpoint file doesn't exist at: {self.diffusion_ckpt_path}"
 
     def load_diffusion_model(self):
+        """Loads diffusion model from the parameters initialized in the class
+
+        Returns:
+          LatentModel: the loaded stable diffusion model
+        """
         print(f"Loading diffusion model from: {self.diffusion_config_path}")
 
         config = OmegaConf.load(self.diffusion_config_path)
@@ -56,6 +70,11 @@ class ModelLoader:
         return model
 
     def load_depth_model(self):
+        """Loads depth model from the parameters initialized in the class
+
+        Returns:
+          DepthModel: the loaded depth model
+        """
         depth_model = DepthModel(self.device)
         depth_model.load_midas(self.models_path)
         depth_model.load_adabins()
