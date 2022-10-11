@@ -20,6 +20,7 @@ import json
 import util
 import torch
 import cv2
+import time
 
 from PIL import Image
 from torch import autocast
@@ -32,15 +33,10 @@ from k_diffusion.external import CompVisDenoiser
 from einops import repeat, rearrange
 from contextlib import nullcontext
 
-from animation_params import AnimationParams
+from params.params import Params
 from run_params import RunParams
 from model_loader import ModelLoader
 from helpers import DepthModel, sampler_fn
-
-# TODO: move config to a separate file or argparse
-models_path = "/content/drive/MyDrive/AI/Stable_Diffusion/"
-
-FPS = 10
 
 
 class Animation:
@@ -48,8 +44,7 @@ class Animation:
         self,
         diffusion_model,
         depth_model,
-        out_path,
-        batch_name,
+        out_dir,
         init_image,
         prompts,
         song,
@@ -58,15 +53,18 @@ class Animation:
         device="cuda",
         **kwargs,
     ):
-        self.animation_params = AnimationParams(motion_type, **kwargs)
-        self.run_params = RunParams(out_path, batch_name, init_image, prompts)
-        self.song = song
-        self.prompts = prompts
-        self.fps = kwargs.get("fps", FPS)  # TODO: move in run_params
-        self.depth_model = depth_model
         self.diffusion_model = diffusion_model
+        self.depth_model = depth_model
+        self.song = song
+        self.params = Params(
+            out_dir=out_dir,
+            init_image=init_image,
+            prompts=prompts,
+            motion_type=motion_type,
+        )
         self.half_precision = half_precision
         self.device = device
+        self.run_id = time.strftime("%Y%m%d_-_%H_%M_%S")
 
     def run(self):
         self._generate_frames()
@@ -79,7 +77,7 @@ class Animation:
         ret = (
             f"-- General params:\n"
             + f"song: {self.song}\n"
-            + f"fps: {self.fps}\n"
+            + f"fps: {self.params.fps}\n"
             + f"\n"
             + f"-- Animation params:\n"
             + f"{self.animation_params}"
@@ -87,22 +85,12 @@ class Animation:
 
         return ret
 
-    def _load_depth_model(self):
-        depth_model = DepthModel(self.device)
-        depth_model.load_midas(models_path)
-        if self.animation_params.anim_args["midas_weight"] < 1.0:
-            depth_model.load_adabins()
-
-        return depth_model
-
     def _generate_video_from_frames(self):
         # TODO: have better path management
-        image_path = os.path.join(
-            self.run_params.outdir, f"{self.run_params.timestring}_%05d.png"
-        )
-        temp_mp4_path = f"/content/{self.run_params.timestring}_temp.mp4"
+        image_path = os.path.join(self.params.out_dir, f"{self.run_id}_%05d.png")
+        temp_mp4_path = f"/content/{self.run_id}_temp.mp4"
 
-        command = f'ffmpeg -y -vcodec png -r {self.fps} -start_number "0" -i "{image_path}" -frames:v {self.animation_params.max_frames} -c:v libx264 -vf fps="{self.fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
+        command = f'ffmpeg -y -vcodec png -r {self.params.fps} -start_number "0" -i "{image_path}" -frames:v {self.params.max_frames} -c:v libx264 -vf fps="{self.params.fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
         os.system(command)
 
         postprocessed_video_path = self._post_process_video(temp_mp4_path)
@@ -122,8 +110,8 @@ class Animation:
             f'ffmpeg -i {temp_rev_mp4_path} -filter:v "setpts=PTS/2" {temp_rev_x2_mp4_path}'
         )
 
-        concat_list_path = f"/content/{self.run_params.timestring}_concat_list.txt"
-        boomerang_video_path = f"/content/{self.run_params.timestring}_boomerang.mp4"
+        concat_list_path = f"/content/{self.run_id}_concat_list.txt"
+        boomerang_video_path = f"/content/{self.run_id}_boomerang.mp4"
 
         open(concat_list_path, "w").write(
             f"file {temp_mp4_path}\nfile {temp_rev_x2_mp4_path}"
@@ -136,7 +124,7 @@ class Animation:
 
         audio_path = "/content/as_it_was_cut_boomerang.mp3"
         boomerang_video_path_with_audio = os.path.join(
-            self.run_params.outdir, f"{self.run_params.timestring}_boomerang_audio.mp4"
+            self.params.out_dir, f"{self.run_id}_boomerang_audio.mp4"
         )
         os.system(
             f"ffmpeg -y -i {boomerang_video_path} -i {audio_path} -c copy -map 0:v:0 -map 1:a:0 {boomerang_video_path_with_audio}"
@@ -145,31 +133,31 @@ class Animation:
         return boomerang_video_path_with_audio
 
     def _generate_frames(self):
-        anim_args = self.animation_params.anim_args
+        anim_args = self.params.animation_params.anim_args
 
         # expand key frame strings to values
-        keys = self.animation_params
+        keys = self.params.animation_params
 
         # create output folder for the batch
-        os.makedirs(self.run_params.outdir, exist_ok=True)
-        print(f"Saving animation frames to {self.run_params.outdir}")
+        os.makedirs(self.params.out_dir, exist_ok=True)
+        print(f"Saving animation frames to {self.params.out_dir}")
 
         # save settings for the batch
         settings_filename = os.path.join(
-            self.run_params.outdir, f"{self.run_params.timestring}_settings.txt"
+            self.params.out_dir, f"{self.run_id}_settings.txt"
         )
         with open(settings_filename, "w+", encoding="utf-8") as settings_file:
             settings_dict = {
-                **self.run_params.dump_attributes(),
-                **self.animation_params.dump_attributes(),
+                "song": self.song,
+                "run_id": self.run_id,
+                "half_precision": self.half_precision,
+                **self.params.dump_attributes(),
             }
             json.dump(settings_dict, settings_file, ensure_ascii=False, indent=4)
 
         # expand prompts out to per-frame
-        prompt_series = pd.Series(
-            [np.nan for a in range(self.animation_params.max_frames)]
-        )
-        for i, prompt in self.prompts.items():
+        prompt_series = pd.Series([np.nan for a in range(self.params.max_frames)])
+        for i, prompt in self.params.prompts.items():
             prompt_series[i] = prompt
         prompt_series = prompt_series.ffill().bfill()
 
@@ -182,10 +170,8 @@ class Animation:
         frame_idx = 0
         prev_sample = None
 
-        while frame_idx < self.animation_params.max_frames:
-            print(
-                f"Rendering animation frame {frame_idx} of {self.animation_params.max_frames}"
-            )
+        while frame_idx < self.params.max_frames:
+            print(f"Rendering animation frame {frame_idx} of {self.params.max_frames}")
             noise = keys.noise_schedule_series[frame_idx]
             strength = keys.strength_schedule_series[frame_idx]
             contrast = keys.contrast_schedule_series[frame_idx]
@@ -238,9 +224,9 @@ class Animation:
                     else:
                         img = turbo_next_image
 
-                    filename = f"{self.run_params.timestring}_{tween_frame_idx:05}.png"
+                    filename = f"{self.run_id}_{tween_frame_idx:05}.png"
                     cv2.imwrite(
-                        os.path.join(self.run_params.outdir, filename),
+                        os.path.join(self.params.out_dir, filename),
                         cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR),
                     )
                 if turbo_next_image is not None:
@@ -280,20 +266,20 @@ class Animation:
                 )
 
                 # use transformed previous frame as init for current
-                self.run_params.use_init = True
+                self.params.use_init = True
                 if self.half_precision:
-                    self.run_params.init_sample = noised_sample.half().to(self.device)
+                    self.params.init_sample = noised_sample.half().to(self.device)
                 else:
-                    self.run_params.init_sample = noised_sample.to(self.device)
-                self.run_params.strength = max(0.0, min(1.0, strength))
+                    self.params.init_sample = noised_sample.to(self.device)
+                self.params.strength = max(0.0, min(1.0, strength))
 
             # grab prompt for current frame
-            self.run_params.prompt = prompt_series[frame_idx]
-            print(f"{self.run_params.prompt} {self.run_params.seed}")
+            current_frame_prompt = prompt_series[frame_idx]
+            print(f"{current_frame_prompt} {self.params.seed}")
 
             # sample the diffusion model
             sample, image = self._generate_single_frame(
-                return_latent=False, return_sample=True
+                prompt=current_frame_prompt, return_latent=False, return_sample=True
             )
             prev_sample = sample
 
@@ -308,8 +294,8 @@ class Animation:
                 )
                 frame_idx += turbo_steps
             else:
-                filename = f"{self.run_params.timestring}_{frame_idx:05}.png"
-                image.save(os.path.join(self.run_params.outdir, filename))
+                filename = f"{self.run_id}_{frame_idx:05}.png"
+                image.save(os.path.join(self.params.out_dir, filename))
                 if anim_args["save_depth_maps"]:
                     if depth is None:
                         depth = self.depth_model.predict(
@@ -317,51 +303,50 @@ class Animation:
                         )
                     self.depth_model.save(
                         os.path.join(
-                            self.run_params.outdir,
-                            f"{self.run_params.timestring}_depth_{frame_idx:05}.png",
+                            self.params.out_dir,
+                            f"{self.run_id}_depth_{frame_idx:05}.png",
                         ),
                         depth,
                     )
                 frame_idx += 1
 
-            self.run_params.seed = util.next_seed(self.run_params)
+            self.params.seed = util.next_seed(self.params)
 
     def _generate_single_frame(
-        self, frame=0, return_latent=False, return_sample=False, return_c=False
+        self, prompt, frame=0, return_latent=False, return_sample=False, return_c=False
     ):
-        seed_everything(self.run_params.seed)
-        os.makedirs(self.run_params.outdir, exist_ok=True)
+        seed_everything(self.params.seed)
+        os.makedirs(self.params.out_dir, exist_ok=True)
 
         sampler = (
             PLMSSampler(self.diffusion_model)
-            if self.run_params.sampler == "plms"
+            if self.params.sampler == "plms"
             else DDIMSampler(self.diffusion_model)
         )
         model_wrap = CompVisDenoiser(self.diffusion_model)
-        batch_size = self.run_params.n_samples
-        prompt = self.run_params.prompt
+        batch_size = self.params.n_samples
         assert prompt is not None
         data = [batch_size * [prompt]]
         precision_scope = (
-            autocast if self.run_params.precision == "autocast" else nullcontext
+            autocast if self.params.precision == "autocast" else nullcontext
         )
 
         init_latent = None
         init_image = None
-        if self.run_params.init_latent is not None:
-            init_latent = self.run_params.init_latent
-        elif self.run_params.init_sample is not None:
+        if self.params.init_latent is not None:
+            init_latent = self.params.init_latent
+        elif self.params.init_sample is not None:
             with precision_scope("cuda"):
                 init_latent = self.diffusion_model.get_first_stage_encoding(
-                    self.diffusion_model.encode_first_stage(self.run_params.init_sample)
+                    self.diffusion_model.encode_first_stage(self.params.init_sample)
                 )
         elif (
-            self.run_params.use_init
-            and self.run_params.init_image != None
-            and self.run_params.init_image != ""
+            self.params.use_init
+            and self.params.init_image != None
+            and self.params.init_image != ""
         ):
             init_image = util.load_img(
-                self.run_params.init_image, shape=(self.run_params.W, self.run_params.H)
+                self.params.init_image, shape=(self.params.W, self.params.H)
             )
             init_image = init_image.to(self.device)
             init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
@@ -371,9 +356,9 @@ class Animation:
                 )  # move to latent space
 
         if (
-            not self.run_params.use_init
-            and self.run_params.strength > 0
-            and self.run_params.strength_0_no_init
+            not self.params.use_init
+            and self.params.strength > 0
+            and self.params.strength_0_no_init
         ):
             print(
                 "\nNo init image, but strength > 0. Strength has been auto set to 0, since use_init is False."
@@ -381,26 +366,27 @@ class Animation:
             print(
                 "If you want to force strength > 0 with no init, please set strength_0_no_init to False.\n"
             )
-            self.run_params.strength = 0
+            self.params.strength = 0
 
         mask = None
 
-        t_enc = int((1.0 - self.run_params.strength) * self.run_params.steps)
+        t_enc = int((1.0 - self.params.strength) * self.params.steps)
 
         # Noise schedule for the k-diffusion samplers (used for masking)
-        k_sigmas = model_wrap.get_sigmas(self.run_params.steps)
+        k_sigmas = model_wrap.get_sigmas(self.params.steps)
         k_sigmas = k_sigmas[len(k_sigmas) - t_enc - 1 :]
 
-        if self.run_params.sampler in ["plms", "ddim"]:
+        if self.params.sampler in ["plms", "ddim"]:
             sampler.make_schedule(
-                ddim_num_steps=self.run_params.steps,
-                ddim_eta=self.run_params.ddim_eta,
+                ddim_num_steps=self.params.steps,
+                ddim_eta=self.params.ddim_eta,
                 ddim_discretize="fill",
                 verbose=False,
             )
 
         callback = util.SamplerCallback(
-            args=self.run_params,
+            args=self.params,
+            run_id=self.run_id,
             mask=mask,
             init_latent=init_latent,
             sigmas=k_sigmas,
@@ -416,9 +402,9 @@ class Animation:
                     for prompts in data:
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
-                        if self.run_params.prompt_weighting:
+                        if self.params.prompt_weighting:
                             uc, c = util.get_uc_and_c(
-                                prompts, self.diffusion_model, self.run_params, frame
+                                prompts, self.diffusion_model, self.params, frame
                             )
                         else:
                             uc = self.diffusion_model.get_learned_conditioning(
@@ -426,12 +412,12 @@ class Animation:
                             )
                             c = self.diffusion_model.get_learned_conditioning(prompts)
 
-                        if self.run_params.scale == 1.0:
+                        if self.params.scale == 1.0:
                             uc = None
-                        if self.run_params.init_c != None:
-                            c = self.run_params.init_c
+                        if self.params.init_c != None:
+                            c = self.params.init_c
 
-                        if self.run_params.sampler in [
+                        if self.params.sampler in [
                             "klms",
                             "dpm2",
                             "dpm2_ancestral",
@@ -442,7 +428,7 @@ class Animation:
                             samples = sampler_fn(
                                 c=c,
                                 uc=uc,
-                                args=self.run_params,
+                                args=self.params,
                                 model_wrap=model_wrap,
                                 init_latent=init_latent,
                                 t_enc=t_enc,
@@ -451,7 +437,7 @@ class Animation:
                             )
                         else:
                             # args.sampler == 'plms' or args.sampler == 'ddim':
-                            if init_latent is not None and self.run_params.strength > 0:
+                            if init_latent is not None and self.params.strength > 0:
                                 z_enc = sampler.stochastic_encode(
                                     init_latent,
                                     torch.tensor([t_enc] * batch_size).to(self.device),
@@ -459,45 +445,45 @@ class Animation:
                             else:
                                 z_enc = torch.randn(
                                     [
-                                        self.run_params.n_samples,
-                                        self.run_params.C,
-                                        self.run_params.H // self.run_params.f,
-                                        self.run_params.W // self.run_params.f,
+                                        self.params.n_samples,
+                                        self.params.C,
+                                        self.params.H // self.params.f,
+                                        self.params.W // self.params.f,
                                     ],
                                     device=self.device,
                                 )
-                            if self.run_params.sampler == "ddim":
+                            if self.params.sampler == "ddim":
                                 samples = sampler.decode(
                                     z_enc,
                                     c,
                                     t_enc,
-                                    unconditional_guidance_scale=self.run_params.scale,
+                                    unconditional_guidance_scale=self.params.scale,
                                     unconditional_conditioning=uc,
                                     img_callback=callback,
                                 )
                             elif (
-                                self.run_params.sampler == "plms"
+                                self.params.sampler == "plms"
                             ):  # no "decode" function in plms, so use "sample"
                                 shape = [
-                                    self.run_params.C,
-                                    self.run_params.H // self.run_params.f,
-                                    self.run_params.W // self.run_params.f,
+                                    self.params.C,
+                                    self.params.H // self.params.f,
+                                    self.params.W // self.params.f,
                                 ]
                                 samples, _ = sampler.sample(
-                                    S=self.run_params.steps,
+                                    S=self.params.steps,
                                     conditioning=c,
-                                    batch_size=self.run_params.n_samples,
+                                    batch_size=self.params.n_samples,
                                     shape=shape,
                                     verbose=False,
-                                    unconditional_guidance_scale=self.run_params.scale,
+                                    unconditional_guidance_scale=self.params.scale,
                                     unconditional_conditioning=uc,
-                                    eta=self.run_params.ddim_eta,
+                                    eta=self.params.ddim_eta,
                                     x_T=z_enc,
                                     img_callback=callback,
                                 )
                             else:
                                 raise Exception(
-                                    f"Sampler {self.run_params.sampler} not recognised."
+                                    f"Sampler {self.params.sampler} not recognised."
                                 )
 
                         if return_latent:
@@ -522,31 +508,3 @@ class Animation:
                             image = Image.fromarray(x_sample.astype(np.uint8))
                             results.append(image)
         return results
-
-
-if __name__ == "__main__":
-    models_path = "/content/drive/MyDrive/AI/Stable_Diffusion/"
-    model_loader = ModelLoader(
-        models_path="/content/drive/MyDrive/AI/Stable_Diffusion/"
-    )
-    diffusion_model = model_loader.load_diffusion_model()
-    depth_model = model_loader.load_depth_model()
-
-    prompts = {
-        0: "LSD acid blotter art featuring a face, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
-        30: "LSD acid blotter art featuring the amazonian forest, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
-        50: "LSD acid blotter art featuring smiling and sad faces, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
-    }
-
-    generation = Animation(
-        diffusion_model=diffusion_model,
-        depth_model=depth_model,
-        batch_name="rlon_test_AIO",
-        out_path="/content/out/",
-        init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
-        prompts=prompts,
-        song="as_it_was",
-        motion_type="default",
-    )
-
-    generation.run()

@@ -3,7 +3,6 @@ import random
 import pandas as pd
 import numpy as np
 
-MAX_FRAMES = 60
 TRANS_Z = "0:(4) 19: (4) 26: (7)"
 ROT_3D_X = "0: (0)"
 ROT_3D_Y = "0: (0)"
@@ -19,8 +18,6 @@ class AnimationParams:
         elif motion_type == "random":
             random_motion_params = self._generate_random_motion_params()
             self.anim_args = self._get_animation_args(**random_motion_params)
-
-        self.max_frames = kwargs.get("max_frames", MAX_FRAMES)
 
         self.angle_series = self._get_inbetweens(
             self._parse_key_frames(self.anim_args["angle"]), self.max_frames

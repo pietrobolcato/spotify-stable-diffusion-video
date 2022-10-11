@@ -25,14 +25,11 @@ if __name__ == "__main__":
     generation = Animation(
         diffusion_model=diffusion_model,
         depth_model=depth_model,
-        batch_name="rlon_test_AIO",
-        out_path="/content/out/",
+        out_dir="/content/test_outdir",
         init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
         prompts=prompts,
         song="as_it_was",
         motion_type="default",
-        half_precision=global_settings["half_precision"],
-        device=global_settings["device"],
     )
 
     generation.run()

@@ -499,6 +499,7 @@ class SamplerCallback(object):
     def __init__(
         self,
         args,
+        run_id,
         mask=None,
         init_latent=None,
         sigmas=None,
@@ -519,7 +520,7 @@ class SamplerCallback(object):
         self.save_sample_per_step = False
         self.show_sample_per_step = False
         self.paths_to_image_steps = [
-            os.path.join(args.outdir, f"{args.timestring}_{index:02}_{args.seed}")
+            os.path.join(args.out_dir, f"{run_id}_{index:02}_{args.seed}")
             for index in range(args.n_samples)
         ]
 
