@@ -1,6 +1,3 @@
-[submodule "pytorch3d-lite"]
-	path = pytorch3d_lite
-	url = https://github.com/MSFTserver/pytorch3d-lite.git
 [submodule "k-diffusion"]
 	path = k_diffusion
 	url = https://github.com/pietrobolcato/k-diffusion.git
@@ -16,3 +13,6 @@
 [submodule "taming_transformers"]
 	path = taming_transformers
 	url = https://github.com/p-x-studio/taming-transformers
+[submodule "pytorch3d_lite"]
+	path = pytorch3d_lite
+	url = https://github.com/p-x-studio/pytorch3d-lite
