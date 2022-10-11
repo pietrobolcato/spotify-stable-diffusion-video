@@ -1,5 +1,5 @@
 import random
-from params.animation_params import AnimationParams
+from animation.params.animation_params import AnimationParams
 
 SEED = 3664512517
 MAX_FRAMES = 60

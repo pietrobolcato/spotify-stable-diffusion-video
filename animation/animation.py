@@ -1,23 +1,9 @@
-import sys
-
-sys.path.extend(
-    [
-        "taming-transformers",
-        "src/clip",
-        "stable-diffusion/",
-        "k-diffusion",
-        "pytorch3d-lite",
-        "AdaBins",
-        "MiDaS",
-    ]
-)
-
 import os
 import subprocess
 import numpy as np
 import pandas as pd
 import json
-import util
+import animation.util as util
 import torch
 import cv2
 import time
@@ -27,15 +13,15 @@ from torch import autocast
 from pytorch_lightning import seed_everything
 from base64 import b64encode
 
-from ldm.models.diffusion.ddim import DDIMSampler
-from ldm.models.diffusion.plms import PLMSSampler
-from k_diffusion.external import CompVisDenoiser
+from animation.stable_diffusion.ldm.models.diffusion.ddim import DDIMSampler
+from animation.stable_diffusion.ldm.models.diffusion.plms import PLMSSampler
+from animation.k_diffusion.k_diffusion.external import CompVisDenoiser
 from einops import repeat, rearrange
 from contextlib import nullcontext
 
-from params.params import Params
-from model_loader import ModelLoader
-from helpers import DepthModel, sampler_fn
+from animation.params.params import Params
+from animation.model_loader import ModelLoader
+from animation.stable_diffusion.helpers import sampler_fn
 
 
 class Animation:

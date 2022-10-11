@@ -1,18 +1,18 @@
 [submodule "k-diffusion"]
-	path = k_diffusion
+	path = animation/k_diffusion
 	url = https://github.com/pietrobolcato/k-diffusion.git
-[submodule "stable-diffusion"]
-	path = stable_diffusion
-	url = https://github.com/pietrobolcato/stable-diffusion
-[submodule "adabins"]
-	path = adabins
-	url = https://github.com/p-x-studio/AdaBins
 [submodule "midas"]
-	path = midas
+	path = animation/midas
 	url = https://github.com/p-x-studio/MiDaS
 [submodule "taming_transformers"]
-	path = taming_transformers
+	path = animation/taming_transformers
 	url = https://github.com/p-x-studio/taming-transformers
 [submodule "pytorch3d_lite"]
-	path = pytorch3d_lite
+	path = animation/pytorch3d_lite
 	url = https://github.com/p-x-studio/pytorch3d-lite
+[submodule "animation/adabins"]
+	path = animation/adabins
+	url = https://github.com/p-x-studio/AdaBins
+[submodule "animation/stable_diffusion"]
+	path = animation/stable_diffusion
+	url = https://github.com/p-x-studio/stable-diffusion
