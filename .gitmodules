@@ -1,6 +1,3 @@
-[submodule "MiDaS"]
-	path = midas
-	url = https://github.com/isl-org/MiDaS.git
 [submodule "pytorch3d-lite"]
 	path = pytorch3d_lite
 	url = https://github.com/MSFTserver/pytorch3d-lite.git
@@ -16,3 +13,6 @@
 [submodule "adabins"]
 	path = adabins
 	url = https://github.com/p-x-studio/AdaBins
+[submodule "midas"]
+	path = midas
+	url = https://github.com/p-x-studio/MiDaS
