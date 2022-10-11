@@ -34,7 +34,6 @@ from einops import repeat, rearrange
 from contextlib import nullcontext
 
 from params.params import Params
-from run_params import RunParams
 from model_loader import ModelLoader
 from helpers import DepthModel, sampler_fn
 

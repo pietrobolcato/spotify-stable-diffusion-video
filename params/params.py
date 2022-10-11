@@ -1,5 +1,5 @@
 import random
-from animation_params import AnimationParams
+from params.animation_params import AnimationParams
 
 SEED = 3664512517
 MAX_FRAMES = 60
@@ -15,7 +15,12 @@ class Params:
         W = 512
         H = 512
         self.W, self.H = map(lambda x: x - x % 64, (W, H))
-        self.animation_params = AnimationParams(motion_type)
+        self.max_frames = kwargs.get("max_frames", MAX_FRAMES)
+        self.fps = kwargs.get("fps", FPS)
+
+        self.animation_params = AnimationParams(
+            max_frames=self.max_frames, motion_type=motion_type
+        )
 
         self.seed = kwargs.get("seed", SEED)
         self.sampler = "euler_ancestral"
@@ -48,9 +53,6 @@ class Params:
         self.prompt_weighting = False
         self.normalize_prompt_weights = True
         self.log_weighted_subprompts = False
-
-        self.max_frames = kwargs.get("max_frames", MAX_FRAMES)
-        self.fps = kwargs.get("fps", FPS)
 
         if self.seed == -1:
             self.seed = random.randint(0, 2**32 - 1)

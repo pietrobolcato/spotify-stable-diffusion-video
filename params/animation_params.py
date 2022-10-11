@@ -10,7 +10,7 @@ ROT_3D_Z = "0:(0) 19: (0) 26: (3) 50: (3.) 60: (0.)"
 
 
 class AnimationParams:
-    def __init__(self, motion_type="default", **kwargs):
+    def __init__(self, max_frames, motion_type="default", **kwargs):
         if motion_type == "default":
             self.anim_args = self._get_animation_args()
         elif motion_type == "custom":
@@ -20,37 +20,37 @@ class AnimationParams:
             self.anim_args = self._get_animation_args(**random_motion_params)
 
         self.angle_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["angle"]), self.max_frames
+            self._parse_key_frames(self.anim_args["angle"]), max_frames
         )
         self.zoom_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["zoom"]), self.max_frames
+            self._parse_key_frames(self.anim_args["zoom"]), max_frames
         )
         self.translation_x_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["translation_x"]), self.max_frames
+            self._parse_key_frames(self.anim_args["translation_x"]), max_frames
         )
         self.translation_y_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["translation_y"]), self.max_frames
+            self._parse_key_frames(self.anim_args["translation_y"]), max_frames
         )
         self.translation_z_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["translation_z"]), self.max_frames
+            self._parse_key_frames(self.anim_args["translation_z"]), max_frames
         )
         self.rotation_3d_x_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["rotation_3d_x"]), self.max_frames
+            self._parse_key_frames(self.anim_args["rotation_3d_x"]), max_frames
         )
         self.rotation_3d_y_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["rotation_3d_y"]), self.max_frames
+            self._parse_key_frames(self.anim_args["rotation_3d_y"]), max_frames
         )
         self.rotation_3d_z_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["rotation_3d_z"]), self.max_frames
+            self._parse_key_frames(self.anim_args["rotation_3d_z"]), max_frames
         )
         self.noise_schedule_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["noise_schedule"]), self.max_frames
+            self._parse_key_frames(self.anim_args["noise_schedule"]), max_frames
         )
         self.strength_schedule_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["strength_schedule"]), self.max_frames
+            self._parse_key_frames(self.anim_args["strength_schedule"]), max_frames
         )
         self.contrast_schedule_series = self._get_inbetweens(
-            self._parse_key_frames(self.anim_args["contrast_schedule"]), self.max_frames
+            self._parse_key_frames(self.anim_args["contrast_schedule"]), max_frames
         )
 
     def dump_attributes(self):

@@ -11,7 +11,7 @@
 	path = k-diffusion
 	url = https://github.com/pietrobolcato/k-diffusion.git
 [submodule "taming-transformers"]
-	path = taming-transformers
+	path = taming_transformers
 	url = https://github.com/CompVis/taming-transformers.git
 [submodule "stable-diffusion"]
 	path = stable-diffusion
