@@ -46,6 +46,8 @@ FPS = 10
 class Animation:
     def __init__(
         self,
+        diffusion_model,
+        depth_model,
         out_path,
         batch_name,
         init_image,
@@ -60,11 +62,9 @@ class Animation:
         self.prompts = prompts
         self.fps = kwargs.get("fps", FPS)  # TODO: move in run_params
         self.device = "cuda"
-        self.depth_model = (
-            self._load_depth_model()
-        )  # TODO: move and unificate in model_loader.py
-        self.model_loader = ModelLoader(models_path)
-        self.model = self.model_loader.load_model_from_config()
+        self.diffusion_model = diffusion_model
+        self.depth_model = depth_model
+        self.half_precision = True  # TODO: move in general settings
 
     def run(self):
         self._generate_frames()
@@ -279,7 +279,7 @@ class Animation:
 
                 # use transformed previous frame as init for current
                 self.run_params.use_init = True
-                if self.model_loader.half_precision:
+                if self.half_precision:
                     self.run_params.init_sample = noised_sample.half().to(self.device)
                 else:
                     self.run_params.init_sample = noised_sample.to(self.device)
@@ -331,11 +331,11 @@ class Animation:
         os.makedirs(self.run_params.outdir, exist_ok=True)
 
         sampler = (
-            PLMSSampler(self.model)
+            PLMSSampler(self.diffusion_model)
             if self.run_params.sampler == "plms"
-            else DDIMSampler(self.model)
+            else DDIMSampler(self.diffusion_model)
         )
-        model_wrap = CompVisDenoiser(self.model)
+        model_wrap = CompVisDenoiser(self.diffusion_model)
         batch_size = self.run_params.n_samples
         prompt = self.run_params.prompt
         assert prompt is not None
@@ -350,8 +350,8 @@ class Animation:
             init_latent = self.run_params.init_latent
         elif self.run_params.init_sample is not None:
             with precision_scope("cuda"):
-                init_latent = self.model.get_first_stage_encoding(
-                    self.model.encode_first_stage(self.run_params.init_sample)
+                init_latent = self.diffusion_model.get_first_stage_encoding(
+                    self.diffusion_model.encode_first_stage(self.run_params.init_sample)
                 )
         elif (
             self.run_params.use_init
@@ -364,8 +364,8 @@ class Animation:
             init_image = init_image.to(self.device)
             init_image = repeat(init_image, "1 ... -> b ...", b=batch_size)
             with precision_scope("cuda"):
-                init_latent = self.model.get_first_stage_encoding(
-                    self.model.encode_first_stage(init_image)
+                init_latent = self.diffusion_model.get_first_stage_encoding(
+                    self.diffusion_model.encode_first_stage(init_image)
                 )  # move to latent space
 
         if (
@@ -410,17 +410,19 @@ class Animation:
         results = []
         with torch.no_grad():
             with precision_scope("cuda"):
-                with self.model.ema_scope():
+                with self.diffusion_model.ema_scope():
                     for prompts in data:
                         if isinstance(prompts, tuple):
                             prompts = list(prompts)
                         if self.run_params.prompt_weighting:
                             uc, c = util.get_uc_and_c(
-                                prompts, self.model, self.run_params, frame
+                                prompts, self.diffusion_model, self.run_params, frame
                             )
                         else:
-                            uc = self.model.get_learned_conditioning(batch_size * [""])
-                            c = self.model.get_learned_conditioning(prompts)
+                            uc = self.diffusion_model.get_learned_conditioning(
+                                batch_size * [""]
+                            )
+                            c = self.diffusion_model.get_learned_conditioning(prompts)
 
                         if self.run_params.scale == 1.0:
                             uc = None
@@ -499,7 +501,7 @@ class Animation:
                         if return_latent:
                             results.append(samples.clone())
 
-                        x_samples = self.model.decode_first_stage(samples)
+                        x_samples = self.diffusion_model.decode_first_stage(samples)
 
                         if return_sample:
                             results.append(x_samples.clone())
@@ -521,6 +523,13 @@ class Animation:
 
 
 if __name__ == "__main__":
+    models_path = "/content/drive/MyDrive/AI/Stable_Diffusion/"
+    model_loader = ModelLoader(
+        models_path="/content/drive/MyDrive/AI/Stable_Diffusion/"
+    )
+    diffusion_model = model_loader.load_diffusion_model()
+    depth_model = model_loader.load_depth_model()
+
     prompts = {
         0: "LSD acid blotter art featuring a face, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
         30: "LSD acid blotter art featuring the amazonian forest, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation",
@@ -528,6 +537,8 @@ if __name__ == "__main__":
     }
 
     generation = Animation(
+        diffusion_model=diffusion_model,
+        depth_model=depth_model,
         batch_name="rlon_test_AIO",
         out_path="/content/out/",
         init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
