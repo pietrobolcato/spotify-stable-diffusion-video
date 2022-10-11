@@ -9,10 +9,22 @@ import torchvision.transforms.functional as TF
 import py3d_tools as p3d
 import random
 import re
-
+import yaml
+from yaml.loader import SafeLoader
 from skimage.exposure import match_histograms
 from einops import rearrange
 from PIL import Image
+
+
+def get_global_settings(settings_path="global_settings.yaml"):
+    assert os.path.exists(
+        settings_path
+    ), f"Global settings file doesn't exist at: {settings_path}"
+
+    with open(settings_path) as f:
+        data = yaml.load(f, Loader=SafeLoader)
+
+        return data
 
 
 def get_output_folder(output_path, batch_folder):

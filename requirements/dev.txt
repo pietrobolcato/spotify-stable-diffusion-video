@@ -170,6 +170,7 @@ pytorch-lightning==1.7.4
     # via -r /content/custom-stable-diffusion-video/requirements/dev.in
 pyyaml==6.0
     # via
+    #   -r /content/custom-stable-diffusion-video/requirements/dev.in
     #   accelerate
     #   huggingface-hub
     #   omegaconf

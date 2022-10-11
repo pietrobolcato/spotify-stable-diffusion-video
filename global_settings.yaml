@@ -1,0 +1,3 @@
+models_path: "/content/drive/MyDrive/AI/Stable_Diffusion/"
+device: "cuda"
+half_precision: True

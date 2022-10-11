@@ -54,6 +54,8 @@ class Animation:
         prompts,
         song,
         motion_type="random",
+        half_precision=True,
+        device="cuda",
         **kwargs,
     ):
         self.animation_params = AnimationParams(motion_type, **kwargs)
@@ -61,10 +63,10 @@ class Animation:
         self.song = song
         self.prompts = prompts
         self.fps = kwargs.get("fps", FPS)  # TODO: move in run_params
-        self.device = "cuda"
-        self.diffusion_model = diffusion_model
         self.depth_model = depth_model
-        self.half_precision = True  # TODO: move in general settings
+        self.diffusion_model = diffusion_model
+        self.half_precision = half_precision
+        self.device = device
 
     def run(self):
         self._generate_frames()

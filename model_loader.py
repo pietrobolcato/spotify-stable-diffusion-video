@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """This module loads the required models such as Stable Diffusion, and Adabins for the animation to work"""
 
+import sys
+
+sys.path.extend(["stable-diffusion", "k-diffusion", "AdaBins", "MiDaS"])
+
 import os
 import torch
 from omegaconf import OmegaConf
