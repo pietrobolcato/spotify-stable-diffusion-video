@@ -1,18 +1,18 @@
 [submodule "AdaBins"]
-	path = AdaBins
+	path = adabins
 	url = https://github.com/shariqfarooq123/AdaBins.git
 [submodule "MiDaS"]
-	path = MiDaS
+	path = midas
 	url = https://github.com/isl-org/MiDaS.git
 [submodule "pytorch3d-lite"]
-	path = pytorch3d-lite
+	path = pytorch3d_lite
 	url = https://github.com/MSFTserver/pytorch3d-lite.git
 [submodule "k-diffusion"]
-	path = k-diffusion
+	path = k_diffusion
 	url = https://github.com/pietrobolcato/k-diffusion.git
 [submodule "taming-transformers"]
 	path = taming_transformers
 	url = https://github.com/CompVis/taming-transformers.git
 [submodule "stable-diffusion"]
-	path = stable-diffusion
+	path = stable_diffusion
 	url = https://github.com/pietrobolcato/stable-diffusion
