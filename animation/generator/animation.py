@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module handles the animation computation"""
+"""This module handles the animation generation and computation"""
 
 import os
 import numpy as np
