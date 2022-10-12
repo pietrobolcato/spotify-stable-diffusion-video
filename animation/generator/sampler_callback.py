@@ -1,10 +1,16 @@
+# -*- coding: utf-8 -*-
+"""This module defines the sampler callback used in the animation generation"""
+
 import os
 import torch
 import numpy as np
 
 
 class SamplerCallback(object):
-    # Creates the callback function to be passed into the samplers for each step
+    """Creates the callback function to be passed into the samplers for each step
+
+    The callback function is applied to the image at each step"""
+
     def __init__(
         self,
         args,
@@ -65,43 +71,54 @@ class SamplerCallback(object):
 
         self.verbose_print = print if verbose else lambda *args, **kwargs: None
 
-    # The callback function is applied to the image at each step
     def dynamic_thresholding_(self, img, threshold):
-        # Dynamic thresholding from Imagen paper (May 2022)
+        """Implements dynamic thresholding from Imagen paper (May 2022)
+
+        Ref: https://arxiv.org/abs/2205.11487"""
+
         s = np.percentile(np.abs(img.cpu()), threshold, axis=tuple(range(1, img.ndim)))
         s = np.max(np.append(s, 1.0))
         torch.clamp_(img, -1 * s, s)
         torch.FloatTensor.div_(img, s)
 
-    # Callback for samplers in the k-diffusion repo, called thus:
-    #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
     def k_callback_(self, args_dict):
+        """Callback for samplers in the k-diffusion repo"""
+
         self.step_index = args_dict["i"]
+
         if self.dynamic_threshold is not None:
             self.dynamic_thresholding_(args_dict["x"], self.dynamic_threshold)
+
         if self.static_threshold is not None:
             torch.clamp_(
                 args_dict["x"], -1 * self.static_threshold, self.static_threshold
             )
+
         if self.mask is not None:
             init_noise = self.init_latent + self.noise * args_dict["sigma"]
             is_masked = torch.logical_and(
                 self.mask >= self.mask_schedule[args_dict["i"]], self.mask != 0
             )
+
             new_img = init_noise * torch.where(is_masked, 1, 0) + args_dict[
                 "x"
             ] * torch.where(is_masked, 0, 1)
+
             args_dict["x"].copy_(new_img)
 
-    # Callback for Compvis samplers
-    # Function that is called on the image (img) and step (i) at each step
     def img_callback_(self, img, i):
+        """Callback for Compvis samplers
+        This function is called on the image (img) and step (i) at each step"""
+
         self.step_index = i
+
         # Thresholding functions
         if self.dynamic_threshold is not None:
             self.dynamic_thresholding_(img, self.dynamic_threshold)
+
         if self.static_threshold is not None:
             torch.clamp_(img, -1 * self.static_threshold, self.static_threshold)
+
         if self.mask is not None:
             i_inv = len(self.sigmas) - i - 1
             init_noise = self.sampler.stochastic_encode(
@@ -109,9 +126,11 @@ class SamplerCallback(object):
                 torch.tensor([i_inv] * self.batch_size).to(self.device),
                 noise=self.noise,
             )
+
             is_masked = torch.logical_and(
                 self.mask >= self.mask_schedule[i], self.mask != 0
             )
+
             new_img = init_noise * torch.where(is_masked, 1, 0) + img * torch.where(
                 is_masked, 0, 1
             )
