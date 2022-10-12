@@ -6,12 +6,13 @@ import subprocess
 import numpy as np
 import pandas as pd
 import json
-import animation.util as util
+import animation.generator.util as util
 import torch
 import cv2
 import time
 import logging
 import animation.generator.post_process as anim_pp
+from animation.generator.sampler_callback import SamplerCallback
 from PIL import Image
 from torch import autocast
 from pytorch_lightning import seed_everything
@@ -22,6 +23,7 @@ from contextlib import nullcontext
 from animation.params.params import Params
 from animation.model_loader import ModelLoader
 from animation.stable_diffusion.helpers import sampler_fn
+from animation.util import init_logging
 
 
 class Animation:
@@ -71,7 +73,7 @@ class Animation:
         self.device = device
         self.run_id = time.strftime("%Y%m%d_-_%H_%M_%S")
 
-        util.init_logging(logging_level)
+        init_logging(logging_level)
 
     def run(self):
         """Runs the animation generation, including video post processing
@@ -302,7 +304,7 @@ class Animation:
         k_sigmas = model_wrap.get_sigmas(self.params.steps)
         k_sigmas = k_sigmas[len(k_sigmas) - t_enc - 1 :]
 
-        callback = util.SamplerCallback(
+        callback = SamplerCallback(
             args=self.params,
             run_id=self.run_id,
             mask=mask,
