@@ -115,17 +115,7 @@ class Animation:
         logging.debug(f"Saving animation frames to {self.params.out_dir}")
 
         # save settings for the batch
-        settings_filename = os.path.join(
-            self.params.out_dir, f"{self.run_id}_settings.txt"
-        )
-        with open(settings_filename, "w+", encoding="utf-8") as settings_file:
-            settings_dict = {
-                "song": self.song,
-                "run_id": self.run_id,
-                "half_precision": self.half_precision,
-                **self.params.dump_attributes(),
-            }
-            json.dump(settings_dict, settings_file, ensure_ascii=False, indent=4)
+        self._save_batch_settings()
 
         # expand prompts out to per-frame
         prompt_series = pd.Series([np.nan for a in range(self.params.max_frames)])
@@ -398,3 +388,16 @@ class Animation:
                             image = Image.fromarray(x_sample.astype(np.uint8))
                             results.append(image)
         return results
+
+    def _save_batch_settings(self):
+        settings_filename = os.path.join(
+            self.params.out_dir, f"{self.run_id}_settings.txt"
+        )
+        with open(settings_filename, "w+", encoding="utf-8") as settings_file:
+            settings_dict = {
+                "song": self.song,
+                "run_id": self.run_id,
+                "half_precision": self.half_precision,
+                **self.params.dump_attributes(),
+            }
+            json.dump(settings_dict, settings_file, ensure_ascii=False, indent=4)
