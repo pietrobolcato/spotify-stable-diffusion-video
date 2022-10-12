@@ -1,5 +1,5 @@
 from animation.model_loader import ModelLoader
-from animation.animation import Animation
+from animation.generator.animation import Animation
 from animation.util import get_global_settings
 
 if __name__ == "__main__":

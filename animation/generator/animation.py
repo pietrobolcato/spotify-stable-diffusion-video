@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""This module handles the animation computation"""
+
 import os
 import subprocess
 import numpy as np
@@ -8,6 +11,7 @@ import torch
 import cv2
 import time
 import logging
+import animation.generator.post_process as anim_pp
 from PIL import Image
 from torch import autocast
 from pytorch_lightning import seed_everything
@@ -21,6 +25,24 @@ from animation.stable_diffusion.helpers import sampler_fn
 
 
 class Animation:
+    """Initializes the animation class with run-specific parameters, as well as the logging
+
+    Args:
+      diffusion_model (LatentModel): the loaded Stable Diffusion model from model_loader.py
+      depth_model (DepthModel): the loaded Depth model from model_loader.py
+      out_dir (str): the output directory of the generation
+      init_image (str): the path or link to the init image to morph
+      prompts (dict of int: str): dictionary mapping prompts to specific frames
+      song (str): the song id,
+      motion_type (str, optional): specifies the animation motion type - can be "default", "custom", or "random"
+      half_precision (bool, optional): if true, loads the diffusion model in half_precision mode
+      device (str, optional): can be "cuda" or "cpu", following pytorch standards
+      logging_level (logging, optional): set level of logging
+      **kwargs: arbitrary keyword arguments to override animation params
+                eg: "max_frames=100" passed as kwarg, would set the animation params "max_frames" to 100,
+                overriding the default value
+    """
+
     def __init__(
         self,
         diffusion_model,
@@ -52,59 +74,21 @@ class Animation:
         util.init_logging(logging_level)
 
     def run(self):
+        """Runs the animation generation, including video post processing
+
+        Returns:
+          str: the path to the generated video
+        """
+
         self._generate_frames()
-        out_video_path = self._generate_video_from_frames()
+        out_video_path = anim_pp.generate_video_from_frames(self.params, self.run_id)
 
         logging.info(f"Video generated at: {out_video_path}")
-
-    def _generate_video_from_frames(self):
-        # TODO: have better path management
-        image_path = os.path.join(self.params.out_dir, f"{self.run_id}_%05d.png")
-        temp_mp4_path = f"/content/{self.run_id}_temp.mp4"
-
-        command = f'ffmpeg -y -vcodec png -r {self.params.fps} -start_number "0" -i "{image_path}" -frames:v {self.params.max_frames} -c:v libx264 -vf fps="{self.params.fps}" -pix_fmt yuv420p -crf 17 -preset veryfast {temp_mp4_path}'
-        os.system(command)
-
-        postprocessed_video_path = self._post_process_video(temp_mp4_path)
-
-        return postprocessed_video_path
-
-    def _post_process_video(self, temp_mp4_path):
-        # add boomerang
-
-        temp_rev_mp4_path = temp_mp4_path.replace("_temp.mp4", "_temp_rev.mp4")
-        os.system(f"ffmpeg -i {temp_mp4_path} -vf reverse {temp_rev_mp4_path}")
-
-        temp_rev_x2_mp4_path = temp_rev_mp4_path.replace(
-            "_temp_rev.mp4", "_temp_rev_x2.mp4"
-        )
-        os.system(
-            f'ffmpeg -i {temp_rev_mp4_path} -filter:v "setpts=PTS/2" {temp_rev_x2_mp4_path}'
-        )
-
-        concat_list_path = f"/content/{self.run_id}_concat_list.txt"
-        boomerang_video_path = f"/content/{self.run_id}_boomerang.mp4"
-
-        open(concat_list_path, "w").write(
-            f"file {temp_mp4_path}\nfile {temp_rev_x2_mp4_path}"
-        )
-        os.system(
-            f"ffmpeg -f concat -safe 0 -i {concat_list_path} -c copy {boomerang_video_path}"
-        )
-
-        # add audio
-
-        audio_path = "/content/as_it_was_cut_boomerang.mp3"
-        boomerang_video_path_with_audio = os.path.join(
-            self.params.out_dir, f"{self.run_id}_boomerang_audio.mp4"
-        )
-        os.system(
-            f"ffmpeg -y -i {boomerang_video_path} -i {audio_path} -c copy -map 0:v:0 -map 1:a:0 {boomerang_video_path_with_audio}"
-        )
-
-        return boomerang_video_path_with_audio
+        return out_video_path
 
     def _generate_frames(self):
+        """Generate the frames of the animation"""
+
         anim_args = self.params.animation_params.anim_args
 
         # expand key frame strings to values
@@ -171,6 +155,7 @@ class Animation:
                             tween_frame_idx,
                             device=self.device,
                         )
+
                     if advance_next:
                         turbo_next_image = util.anim_frame_warp_3d(
                             turbo_next_image,
@@ -180,6 +165,7 @@ class Animation:
                             tween_frame_idx,
                             device=self.device,
                         )
+
                     turbo_prev_frame_idx = turbo_next_frame_idx = tween_frame_idx
 
                     if turbo_prev_image is not None and tween < 1.0:
@@ -205,6 +191,7 @@ class Animation:
                     if self.depth_model
                     else None
                 )
+
                 prev_img = util.anim_frame_warp_3d(
                     prev_img_cv2,
                     depth,
@@ -268,8 +255,10 @@ class Animation:
     def _generate_single_frame(
         self, prompt, frame=0, return_latent=False, return_sample=False, return_c=False
     ):
+        """Sample diffusion model to get image output"""
+
+        # set init settings
         seed_everything(self.params.seed)
-        os.makedirs(self.params.out_dir, exist_ok=True)
 
         sampler = DDIMSampler(self.diffusion_model)
 
@@ -390,6 +379,8 @@ class Animation:
         return results
 
     def _save_batch_settings(self):
+        """Dumps run settings to file for future inspection"""
+
         settings_filename = os.path.join(
             self.params.out_dir, f"{self.run_id}_settings.txt"
         )
