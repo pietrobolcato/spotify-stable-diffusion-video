@@ -2,28 +2,27 @@
 """This module handles the animation computation"""
 
 import os
-import subprocess
 import numpy as np
 import pandas as pd
 import json
-import animation.generator.util as util
 import torch
 import cv2
 import time
 import logging
+import animation.generator.util as util
 import animation.generator.post_process as anim_pp
-from animation.generator.sampler_callback import SamplerCallback
 from PIL import Image
 from torch import autocast
 from pytorch_lightning import seed_everything
-from animation.stable_diffusion.ldm.models.diffusion.ddim import DDIMSampler
-from animation.k_diffusion.k_diffusion.external import CompVisDenoiser
 from einops import repeat, rearrange
 from contextlib import nullcontext
 from animation.params.params import Params
 from animation.model_loader import ModelLoader
 from animation.stable_diffusion.helpers import sampler_fn
 from animation.util import init_logging
+from animation.generator.sampler_callback import SamplerCallback
+from animation.stable_diffusion.ldm.models.diffusion.ddim import DDIMSampler
+from animation.k_diffusion.k_diffusion.external import CompVisDenoiser
 
 
 class Animation:
