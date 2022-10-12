@@ -7,18 +7,14 @@ import animation.util as util
 import torch
 import cv2
 import time
-
+import logging
 from PIL import Image
 from torch import autocast
 from pytorch_lightning import seed_everything
-from base64 import b64encode
-
 from animation.stable_diffusion.ldm.models.diffusion.ddim import DDIMSampler
-from animation.stable_diffusion.ldm.models.diffusion.plms import PLMSSampler
 from animation.k_diffusion.k_diffusion.external import CompVisDenoiser
 from einops import repeat, rearrange
 from contextlib import nullcontext
-
 from animation.params.params import Params
 from animation.model_loader import ModelLoader
 from animation.stable_diffusion.helpers import sampler_fn
@@ -36,6 +32,7 @@ class Animation:
         motion_type="random",
         half_precision=True,
         device="cuda",
+        logging_level=logging.INFO,
         **kwargs,
     ):
         self.diffusion_model = diffusion_model
@@ -52,23 +49,13 @@ class Animation:
         self.device = device
         self.run_id = time.strftime("%Y%m%d_-_%H_%M_%S")
 
+        util.init_logging(logging_level)
+
     def run(self):
         self._generate_frames()
         out_video_path = self._generate_video_from_frames()
 
-        print("Video generated at:", out_video_path)
-
-    def __str__(self):
-        ret = (
-            f"-- General params:\n"
-            + f"song: {self.song}\n"
-            + f"fps: {self.params.fps}\n"
-            + f"\n"
-            + f"-- Animation params:\n"
-            + f"{self.animation_params}"
-        )
-
-        return ret
+        logging.info(f"Video generated at: {out_video_path}")
 
     def _generate_video_from_frames(self):
         # TODO: have better path management
@@ -125,7 +112,7 @@ class Animation:
 
         # create output folder for the batch
         os.makedirs(self.params.out_dir, exist_ok=True)
-        print(f"Saving animation frames to {self.params.out_dir}")
+        logging.debug(f"Saving animation frames to {self.params.out_dir}")
 
         # save settings for the batch
         settings_filename = os.path.join(
@@ -157,7 +144,9 @@ class Animation:
         color_match_sample = None
 
         while frame_idx < self.params.max_frames:
-            print(f"Rendering animation frame {frame_idx} of {self.params.max_frames}")
+            logging.debug(
+                f"Rendering animation frame {frame_idx} of {self.params.max_frames}"
+            )
             noise = keys.noise_schedule_series[frame_idx]
             strength = keys.strength_schedule_series[frame_idx]
             contrast = keys.contrast_schedule_series[frame_idx]
@@ -170,8 +159,8 @@ class Animation:
                     tween = float(tween_frame_idx - tween_frame_start_idx + 1) / float(
                         frame_idx - tween_frame_start_idx
                     )
-                    print(
-                        f"  creating in between frame {tween_frame_idx} tween:{tween:0.2f}"
+                    logging.debug(
+                        f"Creating in between frame {tween_frame_idx} tween:{tween:0.2f}"
                     )
 
                     advance_prev = (
@@ -261,7 +250,7 @@ class Animation:
 
             # grab prompt for current frame
             current_frame_prompt = prompt_series[frame_idx]
-            print(f"{current_frame_prompt} {self.params.seed}")
+            logging.debug(f"Prompt: {current_frame_prompt} | Seed: {self.params.seed}")
 
             # sample the diffusion model
             sample, image = self._generate_single_frame(

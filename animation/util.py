@@ -10,10 +10,20 @@ import animation.pytorch3d_lite.py3d_tools as p3d
 import random
 import re
 import yaml
+import logging
 from yaml.loader import SafeLoader
 from skimage.exposure import match_histograms
 from einops import rearrange
 from PIL import Image
+
+
+def init_logging(logging_level=logging.INFO):
+    # define logging settings
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)-8s %(message)s",
+        level=logging_level,
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
 
 def get_global_settings(settings_path="global_settings.yaml"):

@@ -3,6 +3,8 @@
 
 import os
 import torch
+import logging
+import animation.util as util
 from omegaconf import OmegaConf
 from animation.stable_diffusion.helpers import DepthModel
 from animation.stable_diffusion.ldm.util import instantiate_from_config
@@ -17,6 +19,7 @@ class ModelLoader:
       diffusion_model_checkpoint (str, optional): the name of the diffusion model checkpoint file
       half_precision (bool, optional): if true, loads the diffusion model in half_precision mode
       device (str, optional): can be "cuda" or "cpu", following pytorch standards
+      logging_level (logging, optional): set level of logging
     """
 
     def __init__(
@@ -26,6 +29,7 @@ class ModelLoader:
         diffusion_model_checkpoint="sd-v1-4.ckpt",
         half_precision=True,
         device="cuda",
+        logging_level=logging.INFO,
     ):
         self.models_path = models_path
         self.diffusion_model_config = diffusion_model_config
@@ -47,13 +51,15 @@ class ModelLoader:
             self.diffusion_ckpt_path
         ), f"Diffusion checkpoint file doesn't exist at: {self.diffusion_ckpt_path}"
 
+        util.init_logging(logging_level)
+
     def load_diffusion_model(self):
         """Loads diffusion model from the parameters initialized in the class
 
         Returns:
           LatentModel: the loaded stable diffusion model
         """
-        print(f"Loading diffusion model from: {self.diffusion_config_path}")
+        logging.info(f"Loading diffusion model from: {self.diffusion_config_path}")
 
         config = OmegaConf.load(self.diffusion_config_path)
         ckpt_load = torch.load(self.diffusion_ckpt_path, map_location=self.device)
