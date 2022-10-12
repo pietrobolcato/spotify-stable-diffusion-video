@@ -1,0 +1,26 @@
+name: pytest
+
+on:
+  pull_request:
+  push:
+  # allows this Action to be triggered manually
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          pip install -r requirements/dev.txt
+      - name: Test
+        run: |
+          python -m pytest --import-mode=append -v animation/tests
