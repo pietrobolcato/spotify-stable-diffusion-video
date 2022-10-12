@@ -13,3 +13,67 @@ yellow_submarine:
     30: "LSD acid blotter art featuring a yellow submarine in the sea, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
     50: "LSD acid blotter art featuring people living together, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
   song: "$CURRENT_FOLDER$/audio/yellow_submarine.mp3"
+
+lievitating:
+  title: "Lievitating - Dua Lipa"
+  prompts:
+    0: "LSD acid blotter art featuring people, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring floating objects, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring love and connection, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/lievitating.mp3"
+
+shivers:
+  title: "Shivers - Ed Sheeran"
+  prompts:
+    0: "LSD acid blotter art featuring humans, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring shivering sensations, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring high peaks, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/shivers.mp3"
+
+for_my_hand:
+  title: "For My Hand - Burna Boy"
+  prompts:
+    0: "LSD acid blotter art featuring figures, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring hands, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring friendship and help, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/for_my_hand.mp3"
+
+left_and_right:
+  title: "Left and Right - Charlie Puth"
+  prompts:
+    0: "LSD acid blotter art featuring people, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring left and right signs in the desert, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring naples in summer, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/left_and_right.mp3"
+
+the_motto:
+  title: "The Motto - Tiesto"
+  prompts:
+    0: "LSD acid blotter art featuring friends, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring enveloping sun, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring margeritas in mexico, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/the_motto.mp3"
+
+to_be_loved:
+  title: "To Be Loved - Lizzo"
+  prompts:
+    0: "LSD acid blotter art featuring love, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring warming hugs, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring joy and satisfaction, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/to_be_loved.mp3"
+
+unholy:
+  title: "Unholy - Sam Smith"
+  prompts:
+    0: "LSD acid blotter art featuring a priest, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring churches of rome in summer, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring mount sinai in winter, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/unholy.mp3"
+
+wrecking_ball:
+  title: "Wrecking Ball - Miley Cyrus"
+  prompts:
+    0: "LSD acid blotter art featuring Miley Cyrus, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring a huge wrecking ball, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring a destroyed building by a wrecking ball, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/wrecking_ball.mp3"
