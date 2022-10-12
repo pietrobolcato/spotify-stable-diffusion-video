@@ -2,15 +2,16 @@ import re
 import random
 import pandas as pd
 import numpy as np
-
-TRANS_Z = "0:(4) 19: (4) 26: (7)"
-ROT_3D_X = "0: (0)"
-ROT_3D_Y = "0: (0)"
-ROT_3D_Z = "0:(0) 19: (0) 26: (3) 50: (3.) 60: (0.)"
+from animation.params.util import get_default
 
 
 class AnimationParams:
-    def __init__(self, max_frames, motion_type="default", **kwargs):
+    def __init__(
+        self, max_frames, motion_type="default", custom_default_file=None, **kwargs
+    ):
+        # load default values from yaml
+        self.def_values = get_default(custom_default_file)["animation_params"]
+
         if motion_type == "default":
             self.anim_args = self._get_animation_args()
         elif motion_type == "custom":
@@ -63,39 +64,42 @@ class AnimationParams:
         return attributes
 
     def _get_animation_args(self, **kwargs):
-        """kwargs can change default:
-        translation_z
-        rotation_3d_x
-        rotation_3d_y
-        rotation_3d z"""
+        translation_z = kwargs.get("translation_z", self.def_values["translation_z"])
+        rotation_3d_x = kwargs.get("rotation_3d_x", self.def_values["rotation_3d_x"])
+        rotation_3d_y = kwargs.get("rotation_3d_y", self.def_values["rotation_3d_y"])
+        rotation_3d_z = kwargs.get("rotation_3d_z", self.def_values["rotation_3d_z"])
 
-        translation_z = kwargs.get("translation_z", TRANS_Z)
-        rotation_3d_x = kwargs.get("rotation_3d_x", ROT_3D_X)
-        rotation_3d_y = kwargs.get("rotation_3d_y", ROT_3D_Y)
-        rotation_3d_z = kwargs.get("rotation_3d_z", ROT_3D_Z)
+        angle = kwargs.get("angle", self.def_values["angle"])
+        zoom = kwargs.get("zoom", self.def_values["zoom"])
+        translation_x = kwargs.get("translation_x", self.def_values["translation_x"])
+        translation_y = kwargs.get("translation_y", self.def_values["translation_y"])
 
-        max_frames = 50
-        border = "replicate"
+        noise_schedule = kwargs.get("noise_schedule", self.def_values["noise_schedule"])
+        strength_schedule = kwargs.get(
+            "strength_schedule", self.def_values["strength_schedule"]
+        )
+        contrast_schedule = kwargs.get(
+            "contrast_schedule", self.def_values["contrast_schedule"]
+        )
 
-        angle = "0:(0)"
-        zoom = "0:(1.04)"
-        translation_x = "0:(0)"
-        translation_y = "0:(0)"
+        color_coherence = kwargs.get(
+            "color_coherence", self.def_values["color_coherence"]
+        )
+        diffusion_cadence = kwargs.get(
+            "diffusion_cadence", self.def_values["diffusion_cadence"]
+        )
 
-        noise_schedule = "0: (0.02) "
-        strength_schedule = "0: (0.9) 20: (0.8) 30: (0.5) 34: (0.4) 36: (0.3) 38: (0.75) 50: (0.05) 100: (0.3)"
-        contrast_schedule = "0: (1.0)"
+        use_depth_warping = kwargs.get(
+            "use_depth_warping", self.def_values["use_depth_warping"]
+        )
+        midas_weight = kwargs.get("midas_weight", self.def_values["midas_weight"])
+        near_plane = kwargs.get("near_plane", self.def_values["near_plane"])
+        far_plane = kwargs.get("far_plane", self.def_values["far_plane"])
+        fov = kwargs.get("fov", self.def_values["fov"])
+        padding_mode = kwargs.get("padding_mode", self.def_values["padding_mode"])
+        sampling_mode = kwargs.get("sampling_mode", self.def_values["sampling_mode"])
 
-        color_coherence = "None"
-        diffusion_cadence = "2"
-
-        use_depth_warping = True
-        midas_weight = 0.3
-        near_plane = 200
-        far_plane = 10000
-        fov = 40
-        padding_mode = "border"
-        sampling_mode = "bicubic"
+        border = kwargs.get("border", self.def_values["border"])
 
         return locals()
 

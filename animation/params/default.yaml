@@ -1,0 +1,64 @@
+params:
+  W: 512
+  H: 512
+  max_frames: 60
+  fps: 10
+  seed: -1 # 3664512517
+  sampler: "euler_ancestral"
+  steps: 15
+  scale: 7
+  ddim_eta: 0.0
+  dynamic_threshold: null
+  static_threshold: null
+
+  save_samples: True
+  save_settings: True
+  display_samples: True
+
+  n_batch: 1
+  filename_format: "{timestring}_{index}.png"
+  seed_behavior: "iter"
+
+  use_init: True
+  strength: 1
+
+  n_samples: 1
+  precision: "autocast"
+  C: 4
+  f: 8
+
+  init_latent: null
+  init_sample: null
+  init_c: null
+
+  prompt_weighting: False
+  normalize_prompt_weights: True
+  log_weighted_subprompts: False
+
+animation_params:
+  translation_z: "0:(4) 19: (4) 26: (7)"
+  rotation_3d_x: "0: (0)"
+  rotation_3d_y: "0: (0)"
+  rotation_3d_z: "0:(0) 19: (0) 26: (3) 50: (3.) 60: (0.)"
+
+  angle: "0:(0)"
+  zoom: "0:(1.04)"
+  translation_x: "0:(0)"
+  translation_y: "0:(0)"
+
+  noise_schedule: "0: (0.02) "
+  strength_schedule: "0: (0.9) 20: (0.8) 30: (0.5) 34: (0.4) 36: (0.3) 38: (0.75) 50: (0.05) 100: (0.3)"
+  contrast_schedule: "0: (1.0)"
+
+  color_coherence: "None" # can be: match_lab, match_rgb, match_hsv
+  diffusion_cadence: "2"
+
+  use_depth_warping: True
+  midas_weight: 0.3
+  near_plane: 200
+  far_plane: 10000
+  fov: 40
+  padding_mode: "border"
+  sampling_mode: "bicubic"
+
+  border: "replicate"

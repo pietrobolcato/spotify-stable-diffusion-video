@@ -24,7 +24,7 @@ def get_global_settings(settings_path="global_settings.yaml"):
     with open(settings_path) as f:
         data = yaml.load(f, Loader=SafeLoader)
 
-        return data
+    return data
 
 
 def get_output_folder(output_path, batch_folder):

@@ -1,58 +1,82 @@
 import random
+import os
+from animation.params.util import get_default
 from animation.params.animation_params import AnimationParams
-
-SEED = 3664512517
-MAX_FRAMES = 60
-FPS = 10
 
 
 class Params:
-    def __init__(self, out_dir, init_image, prompts, motion_type="default", **kwargs):
+    def __init__(
+        self,
+        out_dir,
+        init_image,
+        prompts,
+        motion_type="default",
+        custom_default_file=None,
+        **kwargs
+    ):
+        # load default values from yaml
+        def_values = get_default(custom_default_file)["params"]
+
         self.out_dir = out_dir
         self.init_image = init_image
         self.prompts = prompts
 
-        W = 512
-        H = 512
-        self.W, self.H = map(lambda x: x - x % 64, (W, H))
-        self.max_frames = kwargs.get("max_frames", MAX_FRAMES)
-        self.fps = kwargs.get("fps", FPS)
+        self.W = kwargs.get("W", def_values["W"])
+        self.H = kwargs.get("H", def_values["H"])
+        self.W, self.H = map(lambda x: x - x % 64, (self.W, self.H))
+
+        self.max_frames = kwargs.get("max_frames", def_values["max_frames"])
+        self.fps = kwargs.get("fps", def_values["fps"])
 
         self.animation_params = AnimationParams(
             max_frames=self.max_frames, motion_type=motion_type
         )
 
-        self.seed = kwargs.get("seed", SEED)
-        self.sampler = "euler_ancestral"
-        self.steps = 15
-        self.scale = 7
-        self.ddim_eta = 0.0
-        self.dynamic_threshold = None
-        self.static_threshold = None
+        self.seed = kwargs.get("seed", def_values["seed"])
+        self.sampler = kwargs.get("sampler", def_values["sampler"])
+        self.steps = kwargs.get("steps", def_values["steps"])
+        self.scale = kwargs.get("scale", def_values["scale"])
+        self.ddim_eta = kwargs.get("ddim_eta", def_values["ddim_eta"])
+        self.dynamic_threshold = kwargs.get(
+            "dynamic_threshold", def_values["dynamic_threshold"]
+        )
+        self.static_threshold = kwargs.get(
+            "static_threshold", def_values["static_threshold"]
+        )
 
-        self.save_samples = True
-        self.save_settings = True
-        self.display_samples = True
+        self.save_samples = kwargs.get("save_samples", def_values["save_samples"])
+        self.save_settings = kwargs.get("save_settings", def_values["save_settings"])
+        self.display_samples = kwargs.get(
+            "display_samples", def_values["display_samples"]
+        )
 
-        self.n_batch = 1
-        self.filename_format = "{timestring}_{index}.png"
-        self.seed_behavior = "iter"
+        self.n_batch = kwargs.get("n_batch", def_values["n_batch"])
+        self.filename_format = kwargs.get(
+            "filename_format", def_values["filename_format"]
+        )
+        self.seed_behavior = kwargs.get("seed_behavior", def_values["seed_behavior"])
 
-        self.use_init = True
-        self.strength = 1
+        self.use_init = kwargs.get("use_init", def_values["use_init"])
+        self.strength = kwargs.get("strength", def_values["strength"])
 
-        self.n_samples = 1
-        self.precision = "autocast"
-        self.C = 4
-        self.f = 8
+        self.n_samples = kwargs.get("n_samples", def_values["n_samples"])
+        self.precision = kwargs.get("precision", def_values["precision"])
+        self.C = kwargs.get("C", def_values["C"])
+        self.f = kwargs.get("f", def_values["f"])
 
-        self.init_latent = None
-        self.init_sample = None
-        self.init_c = None
+        self.init_latent = kwargs.get("init_latent", def_values["init_latent"])
+        self.init_sample = kwargs.get("init_sample", def_values["init_sample"])
+        self.init_c = kwargs.get("init_c", def_values["init_c"])
 
-        self.prompt_weighting = False
-        self.normalize_prompt_weights = True
-        self.log_weighted_subprompts = False
+        self.prompt_weighting = kwargs.get(
+            "prompt_weighting", def_values["prompt_weighting"]
+        )
+        self.normalize_prompt_weights = kwargs.get(
+            "normalize_prompt_weights", def_values["normalize_prompt_weights"]
+        )
+        self.log_weighted_subprompts = kwargs.get(
+            "log_weighted_subprompts", def_values["log_weighted_subprompts"]
+        )
 
         if self.seed == -1:
             self.seed = random.randint(0, 2**32 - 1)

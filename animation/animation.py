@@ -154,6 +154,7 @@ class Animation:
         n_samples = 1
         frame_idx = 0
         prev_sample = None
+        color_match_sample = None
 
         while frame_idx < self.params.max_frames:
             print(f"Rendering animation frame {frame_idx} of {self.params.max_frames}")
