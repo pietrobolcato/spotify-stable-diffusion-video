@@ -46,6 +46,7 @@ class Animation:
             init_image=init_image,
             prompts=prompts,
             motion_type=motion_type,
+            **kwargs,
         )
         self.half_precision = half_precision
         self.device = device
@@ -56,7 +57,6 @@ class Animation:
         out_video_path = self._generate_video_from_frames()
 
         print("Video generated at:", out_video_path)
-        return
 
     def __str__(self):
         ret = (
@@ -304,11 +304,8 @@ class Animation:
         seed_everything(self.params.seed)
         os.makedirs(self.params.out_dir, exist_ok=True)
 
-        sampler = (
-            PLMSSampler(self.diffusion_model)
-            if self.params.sampler == "plms"
-            else DDIMSampler(self.diffusion_model)
-        )
+        sampler = DDIMSampler(self.diffusion_model)
+
         model_wrap = CompVisDenoiser(self.diffusion_model)
         batch_size = self.params.n_samples
         assert prompt is not None
@@ -340,19 +337,6 @@ class Animation:
                 init_latent = self.diffusion_model.get_first_stage_encoding(
                     self.diffusion_model.encode_first_stage(init_image)
                 )  # move to latent space
-
-        if (
-            not self.params.use_init
-            and self.params.strength > 0
-            and self.params.strength_0_no_init
-        ):
-            print(
-                "\nNo init image, but strength > 0. Strength has been auto set to 0, since use_init is False."
-            )
-            print(
-                "If you want to force strength > 0 with no init, please set strength_0_no_init to False.\n"
-            )
-            self.params.strength = 0
 
         mask = None
 
@@ -403,74 +387,25 @@ class Animation:
                         if self.params.init_c != None:
                             c = self.params.init_c
 
-                        if self.params.sampler in [
+                        assert self.params.sampler in [
                             "klms",
                             "dpm2",
                             "dpm2_ancestral",
                             "heun",
                             "euler",
                             "euler_ancestral",
-                        ]:
-                            samples = sampler_fn(
-                                c=c,
-                                uc=uc,
-                                args=self.params,
-                                model_wrap=model_wrap,
-                                init_latent=init_latent,
-                                t_enc=t_enc,
-                                device=self.device,
-                                cb=callback,
-                            )
-                        else:
-                            # args.sampler == 'plms' or args.sampler == 'ddim':
-                            if init_latent is not None and self.params.strength > 0:
-                                z_enc = sampler.stochastic_encode(
-                                    init_latent,
-                                    torch.tensor([t_enc] * batch_size).to(self.device),
-                                )
-                            else:
-                                z_enc = torch.randn(
-                                    [
-                                        self.params.n_samples,
-                                        self.params.C,
-                                        self.params.H // self.params.f,
-                                        self.params.W // self.params.f,
-                                    ],
-                                    device=self.device,
-                                )
-                            if self.params.sampler == "ddim":
-                                samples = sampler.decode(
-                                    z_enc,
-                                    c,
-                                    t_enc,
-                                    unconditional_guidance_scale=self.params.scale,
-                                    unconditional_conditioning=uc,
-                                    img_callback=callback,
-                                )
-                            elif (
-                                self.params.sampler == "plms"
-                            ):  # no "decode" function in plms, so use "sample"
-                                shape = [
-                                    self.params.C,
-                                    self.params.H // self.params.f,
-                                    self.params.W // self.params.f,
-                                ]
-                                samples, _ = sampler.sample(
-                                    S=self.params.steps,
-                                    conditioning=c,
-                                    batch_size=self.params.n_samples,
-                                    shape=shape,
-                                    verbose=False,
-                                    unconditional_guidance_scale=self.params.scale,
-                                    unconditional_conditioning=uc,
-                                    eta=self.params.ddim_eta,
-                                    x_T=z_enc,
-                                    img_callback=callback,
-                                )
-                            else:
-                                raise Exception(
-                                    f"Sampler {self.params.sampler} not recognised."
-                                )
+                        ], "Sampler: {self.params.sampler} not supported"
+
+                        samples = sampler_fn(
+                            c=c,
+                            uc=uc,
+                            args=self.params,
+                            model_wrap=model_wrap,
+                            init_latent=init_latent,
+                            t_enc=t_enc,
+                            device=self.device,
+                            cb=callback,
+                        )
 
                         if return_latent:
                             results.append(samples.clone())
