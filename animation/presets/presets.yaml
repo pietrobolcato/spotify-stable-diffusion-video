@@ -1,0 +1,15 @@
+as_it_was:
+  title: "As it was - Harry Style"
+  prompts:
+    0: "LSD acid blotter art featuring a face, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring the amazonian forest, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring smiling and sad faces, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/as_it_was.mp3"
+
+yellow_submarine:
+  title: "Yellow Submarine - The Beatles"
+  prompts:
+    0: "LSD acid blotter art featuring a group of people, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    30: "LSD acid blotter art featuring a yellow submarine in the sea, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+    50: "LSD acid blotter art featuring people living together, surreal psychedelic hallucination, screenprint by kawase hasui, moebius, colorful flat surreal design, artstation"
+  song: "$CURRENT_FOLDER$/audio/yellow_submarine.mp3"

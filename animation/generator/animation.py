@@ -82,7 +82,9 @@ class Animation:
         """
 
         self._generate_frames()
-        out_video_path = anim_pp.generate_video_from_frames(self.params, self.run_id)
+        out_video_path = anim_pp.generate_video_from_frames(
+            self.params, self.run_id, self.song
+        )
 
         logging.info(f"Video generated at: {out_video_path}")
         return out_video_path
