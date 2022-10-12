@@ -1,9 +1,14 @@
+# -*- coding: utf-8 -*-
+"""Contains the helper functions for the parameters classes"""
+
 import os
 import yaml
 from yaml.loader import SafeLoader
 
 
 def get_default(self, custom_file=None):
+    """Read default values from a specified .yaml file"""
+
     if custom_file != None:
         default_file_path = custom_file
     else:

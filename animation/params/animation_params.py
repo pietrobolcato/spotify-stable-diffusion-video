@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""This class computes the animation motion parameters"""
+
 import re
 import random
 import pandas as pd
@@ -6,6 +9,17 @@ from animation.params.util import get_default
 
 
 class AnimationParams:
+    """Initializes and computes the animation motion parameters
+
+    Args:
+      max_frames (int): the total number of frame in the animation, defined in params.py
+      motion_type (str, optional): specifies the animation motion type - can be "default", "custom", or "random"
+      custom_default_file (:obj:`str`, optional): loads the default values from a specified yaml file
+      **kwargs: arbitrary keyword arguments to change default params
+                eg: "diffusion_cadence=6" passed as kwarg, would set the animation params "diffusion_cadence" to 6,
+                overriding the default value
+    """
+
     def __init__(
         self, max_frames, motion_type="default", custom_default_file=None, **kwargs
     ):
@@ -54,16 +68,9 @@ class AnimationParams:
             self._parse_key_frames(self.anim_args["contrast_schedule"]), max_frames
         )
 
-    def dump_attributes(self):
-        attributes = {}
-
-        for attribute, value in self.anim_args.items():
-            if attribute != "self":
-                attributes[attribute] = value
-
-        return attributes
-
     def _get_animation_args(self, **kwargs):
+        """Set motion animations args. kwargs is used to override default values"""
+
         translation_z = kwargs.get("translation_z", self.def_values["translation_z"])
         rotation_3d_x = kwargs.get("rotation_3d_x", self.def_values["rotation_3d_x"])
         rotation_3d_y = kwargs.get("rotation_3d_y", self.def_values["rotation_3d_y"])
@@ -134,6 +141,17 @@ class AnimationParams:
         return motion_params
 
     def _random_value_on_chance(self, chance, min, max):
+        """Helper function that returns a random value between min and max, only with a specified probability
+
+        Args:
+          chance (float): how likely it is to return a random value
+          min (float): the minimum range of the random value
+          max (float): the maximum range of the random value
+
+        Returns:
+          (bool, float): (true, random_value) if the roll succeeded
+                         (false, -1) if the roll did not succeed
+        """
         roll = random.randint(0, 10)
 
         if roll <= chance:
@@ -144,6 +162,18 @@ class AnimationParams:
     def _get_inbetweens(
         self, key_frames, max_frames, integer=False, interp_method="Linear"
     ):
+        """Helper function that returns interpolated values between keyframes
+
+        Args:
+          key_frames (dict of int: str): the prompts dictionary with their corresponding keyframe
+          max_frames (int): the maximum amount of frames for the animation
+          integer (bool, optional): if true, returns interpolated values only as integer and not floating values
+          interp_method (str, optional): can be "Linear", "Cubic", "Quadratic"
+                                         changes the interpolation between frames
+
+        Returns:
+          (dict of int: str): an extended dictionary with the interpolated values for every frame
+        """
         key_frame_series = pd.Series([np.nan for a in range(max_frames)])
 
         for i, value in key_frames.items():
@@ -167,6 +197,8 @@ class AnimationParams:
         return key_frame_series
 
     def _parse_key_frames(self, string, prompt_parser=None):
+        """Parses keyframes from string to dictionary"""
+
         pattern = r"((?P<frame>[0-9]+):[\s]*[\(](?P<param>[\S\s]*?)[\)])"
         frames = dict()
         for match_object in re.finditer(pattern, string):
@@ -181,6 +213,8 @@ class AnimationParams:
         return frames
 
     def __str__(self):
+        """Prints a summary of the important parameters"""
+
         summary = (
             f"translation_z: {self.anim_args['translation_z']}\n"
             + f"rotation_3d_x: {self.anim_args['rotation_3d_x']}\n"
@@ -188,4 +222,14 @@ class AnimationParams:
             + f"rotation_3d_z: {self.anim_args['rotation_3d_z']}"
         )
 
+    def dump_attributes(self):
+        """Returns a dictionary of attribute names-values pairs"""
+
+        attributes = {}
+
+        for attribute, value in self.anim_args.items():
+            if attribute != "self":
+                attributes[attribute] = value
+
+        return attributes
         return summary

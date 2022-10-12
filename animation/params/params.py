@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""This class contains all the parameters needed for the animation to be rendered"""
+
 import random
 import os
 from animation.params.util import get_default
@@ -5,6 +8,19 @@ from animation.params.animation_params import AnimationParams
 
 
 class Params:
+    """Initializes all the parameters needed for the animation to render
+
+    Args:
+      out_dir (str): path where the output of the animation is saved
+      init_image (str): path or link to the initial image to morph
+      prompts (dict of int: str): dictionary mapping prompts to specific frames
+      motion_type (str, optional): specifies the animation motion type - can be "default", "custom", or "random"
+      custom_default_file (:obj:`str`, optional): loads the default values from a specified yaml file
+      **kwargs: arbitrary keyword arguments to change default params
+                eg: "max_frames=100" passed as kwarg, would set the animation params "max_frames" to 100,
+                overriding the default value
+    """
+
     def __init__(
         self,
         out_dir,
@@ -82,6 +98,8 @@ class Params:
             self.seed = random.randint(0, 2**32 - 1)
 
     def dump_attributes(self):
+        """Returns a dictionary of attribute names-values pairs"""
+
         attributes = {}
 
         for attribute, value in self.__dict__.items():
