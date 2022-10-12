@@ -282,18 +282,6 @@ class Animation:
             else:
                 filename = f"{self.run_id}_{frame_idx:05}.png"
                 image.save(os.path.join(self.params.out_dir, filename))
-                if anim_args["save_depth_maps"]:
-                    if depth is None:
-                        depth = self.depth_model.predict(
-                            util.sample_to_cv2(sample), anim_args
-                        )
-                    self.depth_model.save(
-                        os.path.join(
-                            self.params.out_dir,
-                            f"{self.run_id}_depth_{frame_idx:05}.png",
-                        ),
-                        depth,
-                    )
                 frame_idx += 1
 
             self.params.seed = util.next_seed(self.params)
@@ -345,14 +333,6 @@ class Animation:
         # Noise schedule for the k-diffusion samplers (used for masking)
         k_sigmas = model_wrap.get_sigmas(self.params.steps)
         k_sigmas = k_sigmas[len(k_sigmas) - t_enc - 1 :]
-
-        if self.params.sampler in ["plms", "ddim"]:
-            sampler.make_schedule(
-                ddim_num_steps=self.params.steps,
-                ddim_eta=self.params.ddim_eta,
-                ddim_discretize="fill",
-                verbose=False,
-            )
 
         callback = util.SamplerCallback(
             args=self.params,
