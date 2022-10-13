@@ -36,6 +36,8 @@ charset-normalizer==2.1.1
     # via aiohttp
 clean-fid==0.1.31
     # via -r /content/custom-stable-diffusion-video/requirements/dev.in
+click==8.1.3
+    # via flask
 git+https://github.com/openai/CLIP.git@main#egg=clip
     # via -r /content/custom-stable-diffusion-video/requirements/dev.in
 cycler==0.11.0
@@ -49,6 +51,8 @@ filelock==3.8.0
     #   huggingface-hub
     #   transformers
     #   virtualenv
+flask==2.2.2
+    # via -r /content/custom-stable-diffusion-video/requirements/dev.in
 fonttools==4.37.4
     # via matplotlib
 frozenlist==1.3.1
@@ -69,6 +73,8 @@ google-auth-oauthlib==0.4.6
     # via tensorboard
 grpcio==1.49.1
     # via tensorboard
+gunicorn==20.1.0
+    # via -r /content/custom-stable-diffusion-video/requirements/dev.in
 huggingface-hub==0.10.0
     # via
     #   timm
@@ -81,6 +87,8 @@ idna==2.10
     #   yarl
 importlib-metadata==5.0.0
     # via
+    #   click
+    #   flask
     #   huggingface-hub
     #   jsonschema
     #   markdown
@@ -89,6 +97,10 @@ importlib-metadata==5.0.0
     #   virtualenv
 importlib-resources==5.10.0
     # via jsonschema
+itsdangerous==2.1.2
+    # via flask
+jinja2==3.1.2
+    # via flask
 jsonmerge==1.8.0
     # via -r /content/custom-stable-diffusion-video/requirements/dev.in
 jsonschema==4.16.0
@@ -100,7 +112,9 @@ kornia==0.6.7
 markdown==3.4.1
     # via tensorboard
 markupsafe==2.1.1
-    # via werkzeug
+    # via
+    #   jinja2
+    #   werkzeug
 matplotlib==3.5.3
     # via -r /content/custom-stable-diffusion-video/requirements/dev.in
 multidict==6.0.2
@@ -287,7 +301,9 @@ virtualenv==20.16.5
 wcwidth==0.2.5
     # via ftfy
 werkzeug==2.2.2
-    # via tensorboard
+    # via
+    #   flask
+    #   tensorboard
 wheel==0.37.1
     # via tensorboard
 yarl==1.8.1
