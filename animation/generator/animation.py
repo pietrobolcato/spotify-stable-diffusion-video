@@ -19,7 +19,7 @@ from contextlib import nullcontext
 from animation.params.params import Params
 from animation.model_loader import ModelLoader
 from animation.stable_diffusion.helpers import sampler_fn
-from animation.util import init_logging
+from util import init_logging
 from animation.generator.sampler_callback import SamplerCallback
 from animation.stable_diffusion.ldm.models.diffusion.ddim import DDIMSampler
 from animation.k_diffusion.k_diffusion.external import CompVisDenoiser

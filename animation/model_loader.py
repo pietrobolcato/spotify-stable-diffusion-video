@@ -4,7 +4,7 @@
 import os
 import torch
 import logging
-import animation.util as util
+import util
 from omegaconf import OmegaConf
 from animation.stable_diffusion.helpers import DepthModel
 from animation.stable_diffusion.ldm.util import instantiate_from_config

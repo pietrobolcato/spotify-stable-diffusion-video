@@ -1,7 +1,7 @@
 import animation.presets.presets as presets
 from animation.model_loader import ModelLoader
 from animation.generator.animation import Animation
-from animation.util import get_global_settings
+from util import get_global_settings
 
 if __name__ == "__main__":
     # load settings
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     generation = Animation(
         diffusion_model=diffusion_model,
         depth_model=depth_model,
-        out_dir="/content/test_outdir",
+        out_dir=global_settings["output_directory"],
         init_image="https://i.ibb.co/7zm8Bw2/spotify-img-test.jpg",
         prompts=prompts,
         song=song,

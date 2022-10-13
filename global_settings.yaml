@@ -1,3 +1,4 @@
 models_path: "/content/drive/MyDrive/AI/Stable_Diffusion/"
+output_directory: "/content/out/"
 device: "cuda"
 half_precision: True

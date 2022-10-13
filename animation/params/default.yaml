@@ -1,7 +1,7 @@
 params:
   W: 512
   H: 512
-  max_frames: 60
+  max_frames: 200
   fps: 10
   seed: -1 # 3664512517
   sampler: "euler_ancestral"
