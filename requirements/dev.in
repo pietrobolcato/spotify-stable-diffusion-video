@@ -18,7 +18,9 @@ torchdiffeq
 pre-commit
 pyyaml
 pandas==1.3.5
-flask
 gunicorn
+uvicorn
+fastapi
+pydantic
 git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers
 git+https://github.com/openai/CLIP.git@main#egg=clip
