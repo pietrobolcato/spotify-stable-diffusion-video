@@ -27,6 +27,7 @@ def predict():
     Request params:
       preset (str): the preset for the animation
       init_image (str): the image in link format
+      dev_mode (bool, optional): if set to true, the animation will animation only 5 images for faster testing
 
     Returns:
       400: if request params aren't corrent
@@ -54,6 +55,11 @@ def predict():
         preset = data["preset"]
         init_image = data["init_image"]
 
+        if "dev_mode" in data:
+            dev_mode = data["dev_mode"]
+        else:
+            dev_mode = False
+
         # get prompts and song from preset
         prompts, song = presets.get_prompts_and_song_from_preset(preset)
 
@@ -68,7 +74,12 @@ def predict():
             prompts=prompts,
             song=song,
             motion_type="random",
+            device=global_settings["device"],
         )
+
+        if dev_mode:
+            logging.info("Dev mode is true, set max_frames to 5")
+            generation.params.max_frames = 5
 
         out_path = generation.run()
         end_stopwatch = time.time()

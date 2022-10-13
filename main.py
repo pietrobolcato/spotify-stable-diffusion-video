@@ -28,6 +28,7 @@ if __name__ == "__main__":
         prompts=prompts,
         song=song,
         motion_type="default",
+        device=global_settings["device"],
     )
 
     generation.run()

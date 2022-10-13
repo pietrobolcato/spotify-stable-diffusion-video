@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""This module include tests of the params class"""
+
 from animation.params.params import Params
 from animation.params.util import get_default
 
