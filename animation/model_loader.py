@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""This module loads the required models such as Stable Diffusion, and Adabins for the animation to work"""
+"""This module loads the required models such as Stable Diffusion, Adabins and MiDaS for the 3D animation to work"""
 
 import os
 import torch
