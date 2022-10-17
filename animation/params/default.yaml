@@ -16,7 +16,7 @@ params:
   display_samples: True
 
   n_batch: 1
-  filename_format: "{timestring}_{index}.png"
+  filename_format: "{timestring}_-_{index}.png"
   seed_behavior: "iter"
 
   use_init: True
