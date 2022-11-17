@@ -114,7 +114,7 @@ nodeenv==1.7.0
     # via pre-commit
 numexpr==2.8.4
     # via -r requirements/dev.in
-numpy==1.21.6
+numpy==1.21.1
     # via
     #   accelerate
     #   clean-fid
