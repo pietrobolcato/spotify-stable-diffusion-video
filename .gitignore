@@ -132,3 +132,4 @@ dmypy.json
 # Pretrained models
 pretrained/
 .vscode/
+global_settings.yaml
