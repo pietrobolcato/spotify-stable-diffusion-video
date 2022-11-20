@@ -45,7 +45,7 @@ repos:
   #   # additional configuration of flake8 and extensions in .flake8
 
   # shellcheck-py for linting shell files
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.8.0.4
-    hooks:
-      - id: shellcheck
+  # - repo: https://github.com/shellcheck-py/shellcheck-py
+  #   rev: v0.8.0.4
+  #   hooks:
+  #     - id: shellcheck
