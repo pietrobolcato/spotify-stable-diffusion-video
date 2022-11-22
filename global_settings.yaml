@@ -1,4 +1,4 @@
-models_path: "/content/drive/MyDrive/AI/Stable_Diffusion/"
-output_directory: "/content/out/"
+models_path: "$CURRENT_FOLDER$/pretrained/"
+output_directory: "$CURRENT_FOLDER$/out/"
 device: "cuda"
 half_precision: True
