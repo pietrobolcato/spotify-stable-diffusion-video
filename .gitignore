@@ -130,6 +130,5 @@ dmypy.json
 .pyre/
 
 # Repo specific ignores
-pretrained/
 .vscode/
 global_settings.yaml
