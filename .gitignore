@@ -129,7 +129,7 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Pretrained models
+# Repo specific ignores
 pretrained/
 .vscode/
 global_settings.yaml
