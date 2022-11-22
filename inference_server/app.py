@@ -125,6 +125,8 @@ def show_about():
     """
 
     def bash(command):
+        """Runs a bash command and returns the output"""
+
         output = os.popen(command).read()
         return output
 
@@ -149,8 +151,8 @@ if __name__ == "__main__":
         "inference_server.app:app",
         host="0.0.0.0",
         port=5000,
-        workers=4,
+        workers=1,
         reload=False,
-        debug=True,
+        debug=False,
         log_config=log_config_path,
     )
