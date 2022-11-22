@@ -10,6 +10,13 @@ https://user-images.githubusercontent.com/3061306/195791411-963baea5-266b-416a-b
 
 The repo is based on the amazing work of [Deforum's Stable Diffusion](https://colab.research.google.com/github/deforum/stable-diffusion/blob/main/Deforum_Stable_Diffusion.ipynb). I optimized, cleaned, refactored, and organized the code, as well as extending it with the music video generation feature, preset system, REST server and more.
 
-The repo is still WIP.
+### How to run
 
-This readme will soon be updated with more information.
+1- Install dev dependencies ```pip install -r requirements/dev.txt```
+
+2- Download models in ```pretrained``` by running ```python download_models.py```
+
+3- Start API server by running ```python inference_server/app.py```
+
+
+A docker file is also provided for deployment in a EC2 instance.
